@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>입장 완료 목록</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="page admin-page">
+<main class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <p class="eyebrow">ODATOUR ADMIN</p>
+            <h1>입장 완료</h1>
+        </div>
+        <div class="admin-header-actions">
+            <a class="small-button secondary" th:href="@{/admin/waitings}">처리 대기 <span th:text="${activeCount}">13</span></a>
+            <a class="small-button" th:href="@{/admin/waitings/entered}">새로고침</a>
+        </div>
+    </header>
+
+    <nav class="admin-tabs" aria-label="관리자 목록">
+        <a class="tab-link" th:href="@{/admin/waitings}">처리 대기</a>
+        <a class="tab-link active" th:href="@{/admin/waitings/entered}">입장 완료</a>
+    </nav>
+
+    <section class="summary-grid compact" aria-label="입장 완료 요약">
+        <article class="summary-card">
+            <span>입장 완료</span>
+            <strong th:text="${page.totalItems}">12</strong>
+        </article>
+        <article class="summary-card">
+            <span>페이지당</span>
+            <strong th:text="${page.pageSize}">10</strong>
+        </article>
+        <article class="summary-card">
+            <span>현재 페이지</span>
+            <strong th:text="${page.currentPage}">1</strong>
+        </article>
+        <article class="summary-card">
+            <span>전체 페이지</span>
+            <strong th:text="${page.totalPages}">2</strong>
+        </article>
+    </section>
+
+    <section class="admin-list" aria-label="입장 완료 목록">
+        <p class="empty-message" th:if="${#lists.isEmpty(enteredWaitings)}">입장 완료된 웨이팅이 없습니다.</p>
+        <article class="waiting-card" th:each="waiting : ${enteredWaitings}">
+            <div class="waiting-main">
+                <div>
+                    <span class="queue-number" th:text="|#${waiting.id}|">#101</span>
+                    <strong th:text="${waiting.maskedPhoneNumber}">010-****-2437</strong>
+                </div>
+                <span class="status-badge status-entered" th:text="${waiting.statusLabel}">입장 완료</span>
+            </div>
+
+            <div class="waiting-meta">
+                <span>
+                    등록
+                    <strong th:text="${#temporals.format(waiting.createdAt, 'HH:mm')}">13:42</strong>
+                </span>
+                <span>
+                    입장
+                    <strong th:text="${#temporals.format(waiting.enteredAt, 'HH:mm')}">14:02</strong>
+                </span>
+            </div>
+        </article>
+    </section>
+
+    <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="입장 완료 목록 페이지">
+        <a class="page-link" th:classappend="${!page.hasPrevious} ? ' disabled'"
+           th:href="@{/admin/waitings/entered(page=${page.previousPage})}">이전</a>
+        <a class="page-number" th:each="pageNumber : ${page.pageNumbers}"
+           th:classappend="${pageNumber == page.currentPage} ? ' active'"
+           th:href="@{/admin/waitings/entered(page=${pageNumber})}"
+           th:text="${pageNumber}">1</a>
+        <a class="page-link" th:classappend="${!page.hasNext} ? ' disabled'"
+           th:href="@{/admin/waitings/entered(page=${page.nextPage})}">다음</a>
+    </nav>
+</main>
+</body>
+</html>

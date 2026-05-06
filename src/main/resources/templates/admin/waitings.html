@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>웨이팅 관리자</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="page admin-page">
+<main class="admin-shell">
+    <header class="admin-header">
+        <div>
+            <p class="eyebrow">ODATOUR ADMIN</p>
+            <h1>웨이팅 관리</h1>
+        </div>
+        <div class="admin-header-actions">
+            <a class="small-button secondary" th:href="@{/admin/waitings/entered}">입장 완료 <span th:text="${enteredCount}">12</span></a>
+            <a class="small-button" th:href="@{/admin/waitings}">새로고침</a>
+        </div>
+    </header>
+
+    <nav class="admin-tabs" aria-label="관리자 목록">
+        <a class="tab-link active" th:href="@{/admin/waitings}">처리 대기</a>
+        <a class="tab-link" th:href="@{/admin/waitings/entered}">입장 완료</a>
+    </nav>
+
+    <section class="summary-grid" aria-label="웨이팅 요약">
+        <article class="summary-card">
+            <span>처리 대상</span>
+            <strong th:text="${summary.total}">14</strong>
+        </article>
+        <article class="summary-card">
+            <span>대기 중</span>
+            <strong th:text="${summary.waiting}">9</strong>
+        </article>
+        <article class="summary-card">
+            <span>호출 완료</span>
+            <strong th:text="${summary.called}">4</strong>
+        </article>
+        <article class="summary-card">
+            <span>페이지</span>
+            <strong th:text="${summary.totalPages}">2</strong>
+        </article>
+    </section>
+
+    <section class="admin-list" aria-label="웨이팅 목록">
+        <p class="empty-message" th:if="${#lists.isEmpty(waitings)}">현재 처리할 웨이팅이 없습니다.</p>
+        <article class="waiting-card" th:each="waiting : ${waitings}">
+            <div class="waiting-main">
+                <div>
+                    <span class="queue-number" th:text="|#${waiting.id}|">#1</span>
+                    <strong th:text="${waiting.maskedPhoneNumber}">010-****-4412</strong>
+                </div>
+                <span class="status-badge" th:classappend="| status-${waiting.status.toLowerCase()}|"
+                      th:text="${waiting.statusLabel}">대기 중</span>
+            </div>
+
+            <div class="waiting-meta">
+                <span>
+                    남은 순서
+                    <strong th:text="${waiting.remainingCount == null ? '-' : waiting.remainingCount}">0</strong>
+                </span>
+                <span>
+                    등록
+                    <strong th:text="${#temporals.format(waiting.createdAt, 'HH:mm')}">13:42</strong>
+                </span>
+            </div>
+
+            <div class="admin-actions" th:if="${waiting.actionable}">
+                <form th:action="@{/admin/waitings/{id}/enter(id=${waiting.id})}" method="post">
+                    <button class="action-button enter" type="submit">입장 승인</button>
+                </form>
+                <form th:action="@{/admin/waitings/{id}/no-show(id=${waiting.id})}" method="post">
+                    <button class="action-button no-show" type="submit">노쇼</button>
+                </form>
+            </div>
+        </article>
+    </section>
+
+    <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="웨이팅 목록 페이지">
+        <a class="page-link" th:classappend="${!page.hasPrevious} ? ' disabled'"
+           th:href="@{/admin/waitings(page=${page.previousPage})}">이전</a>
+        <a class="page-number" th:each="pageNumber : ${page.pageNumbers}"
+           th:classappend="${pageNumber == page.currentPage} ? ' active'"
+           th:href="@{/admin/waitings(page=${pageNumber})}"
+           th:text="${pageNumber}">1</a>
+        <a class="page-link" th:classappend="${!page.hasNext} ? ' disabled'"
+           th:href="@{/admin/waitings(page=${page.nextPage})}">다음</a>
+    </nav>
+</main>
+</body>
+</html>
