@@ -1,10 +1,14 @@
 package com.odatour.waiting.controller;
 
+import com.odatour.waiting.controller.view.AdminEnteredRow;
+import com.odatour.waiting.controller.view.AdminSummary;
+import com.odatour.waiting.controller.view.AdminWaitingRow;
+import com.odatour.waiting.controller.view.PageView;
+import com.odatour.waiting.controller.view.WaitingStatusView;
 import com.odatour.waiting.domain.WaitingEntry;
 import com.odatour.waiting.domain.WaitingStatus;
 import com.odatour.waiting.service.DuplicateActiveWaitingException;
 import com.odatour.waiting.service.WaitingService;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Controller;
@@ -228,60 +232,4 @@ public class WaitingPageController {
         );
     }
 
-    public record WaitingStatusView(
-            Long id,
-            String maskedPhoneNumber,
-            String status,
-            String statusLabel,
-            Integer remainingCount,
-            int estimatedWaitMinutes,
-            LocalDateTime createdAt,
-            String notice,
-            String title,
-            boolean cancellable
-    ) {
-    }
-
-    public record AdminSummary(
-            int total,
-            long waiting,
-            long called,
-            int totalPages
-    ) {
-    }
-
-    public record AdminWaitingRow(
-            Long id,
-            String maskedPhoneNumber,
-            String status,
-            String statusLabel,
-            Integer remainingCount,
-            LocalDateTime createdAt,
-            boolean actionable
-    ) {
-    }
-
-    public record AdminEnteredRow(
-            Long id,
-            String maskedPhoneNumber,
-            String status,
-            String statusLabel,
-            LocalDateTime createdAt,
-            LocalDateTime enteredAt
-    ) {
-    }
-
-    public record PageView<T>(
-            List<T> items,
-            int currentPage,
-            int totalPages,
-            int totalItems,
-            int pageSize,
-            boolean hasPrevious,
-            boolean hasNext,
-            int previousPage,
-            int nextPage,
-            List<Integer> pageNumbers
-    ) {
-    }
 }
