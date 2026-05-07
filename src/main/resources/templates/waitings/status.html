@@ -21,6 +21,10 @@
             <span>남은 순서</span>
             <strong th:text="${waiting.remainingCount}">3</strong>
         </div>
+        <div class="ticket-row" th:if="${waiting.remainingCount != null}">
+            <span>예상 대기</span>
+            <strong th:text="|약 ${waiting.estimatedWaitMinutes}분|">약 9분</strong>
+        </div>
         <div class="ticket-row">
             <span>접수 번호</span>
             <strong th:text="|#${waiting.id}|">#1</strong>

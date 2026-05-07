@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class WaitingPageController {
 
     private static final int PAGE_SIZE = 10;
+    private static final int ESTIMATED_WAIT_MINUTES_PER_TEAM = 3;
 
     private final WaitingService waitingService;
 
@@ -30,7 +31,7 @@ public class WaitingPageController {
         if (!model.containsAttribute("phoneNumber")) {
             model.addAttribute("phoneNumber", "");
         }
-        model.addAttribute("estimatedWaitMinutes", 15);
+        model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
         return "waitings/new";
     }
 
@@ -47,12 +48,12 @@ public class WaitingPageController {
             model.addAttribute("errorMessage", "이미 웨이팅 중인 휴대폰 번호입니다.");
             model.addAttribute("activeWaitingId", exception.activeWaiting().id());
             model.addAttribute("phoneNumber", phoneNumber);
-            model.addAttribute("estimatedWaitMinutes", 15);
+            model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
             return "waitings/new";
         } catch (IllegalArgumentException exception) {
             model.addAttribute("errorMessage", exception.getMessage());
             model.addAttribute("phoneNumber", phoneNumber);
-            model.addAttribute("estimatedWaitMinutes", 15);
+            model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
             return "waitings/new";
         }
     }
@@ -122,6 +123,7 @@ public class WaitingPageController {
                 waiting.status().name(),
                 waiting.status().label(),
                 remainingCount,
+                estimatedWaitMinutes(remainingCount),
                 waiting.createdAt(),
                 notice(waiting.status(), remainingCount),
                 title(waiting.status(), remainingCount),
@@ -181,6 +183,13 @@ public class WaitingPageController {
         };
     }
 
+    private int estimatedWaitMinutes(Integer teamCount) {
+        if (teamCount == null) {
+            return 0;
+        }
+        return Math.max(teamCount, 0) * ESTIMATED_WAIT_MINUTES_PER_TEAM;
+    }
+
     private String maskPhoneNumber(String phoneNumber) {
         if (phoneNumber == null || phoneNumber.length() < 7) {
             return "****";
@@ -225,6 +234,7 @@ public class WaitingPageController {
             String status,
             String statusLabel,
             Integer remainingCount,
+            int estimatedWaitMinutes,
             LocalDateTime createdAt,
             String notice,
             String title,

@@ -1,12 +1,14 @@
 package com.odatour.waiting;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import com.odatour.waiting.web.WaitingPageController.WaitingStatusView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,6 +115,40 @@ class OdatourWaitingSystemApplicationTests {
                 .single();
 
         assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    void newWaitingShowsEstimatedWaitMinutesByActiveTeamCount() throws Exception {
+        createWaiting("01012345681");
+        createWaiting("01012345682");
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("estimatedWaitMinutes", 6));
+    }
+
+    @Test
+    void waitingStatusShowsEstimatedWaitMinutesByRemainingTeamCount() throws Exception {
+        createWaiting("01012345691");
+        createWaiting("01012345692");
+        createWaiting("01012345693");
+
+        Long id = jdbcClient.sql("""
+                        select id
+                        from waiting_entry
+                        where phone_number = '01012345693'
+                        """)
+                .query(Long.class)
+                .single();
+
+        mockMvc.perform(get("/waitings/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    WaitingStatusView waiting = (WaitingStatusView) result.getModelAndView()
+                            .getModel()
+                            .get("waiting");
+                    assertThat(waiting.estimatedWaitMinutes()).isEqualTo(6);
+                });
     }
 
     private void createWaiting(String phoneNumber) throws Exception {
