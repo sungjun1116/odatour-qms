@@ -110,6 +110,22 @@ h1 {
     padding: 22px;
 }
 
+.form-alert {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid rgba(220, 38, 38, 0.24);
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 14px;
+}
+
+.form-alert a {
+    color: #991b1b;
+    font-weight: 800;
+}
+
 .field {
     display: grid;
     gap: 8px;

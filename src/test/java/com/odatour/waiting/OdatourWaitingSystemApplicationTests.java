@@ -1,44 +1,124 @@
 package com.odatour.waiting;
 
-import com.solapi.sdk.SolapiClient;
-import com.solapi.sdk.message.exception.SolapiMessageNotReceivedException;
-import com.solapi.sdk.message.model.Message;
-import com.solapi.sdk.message.service.DefaultMessageService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 class OdatourWaitingSystemApplicationTests {
 
-    @Value("${SOL_API_KEY}")
-    private String solApiKey;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @Value("${SOL_API_SECRET}")
-    private String solApiSecret;
+    @Autowired
+    private JdbcClient jdbcClient;
+
+    @BeforeEach
+    void cleanDatabase() {
+        jdbcClient.sql("delete from waiting_entry").update();
+    }
 
     @Test
     void contextLoads() {
     }
 
     @Test
-    void sendSMS() {
-        DefaultMessageService messageService = SolapiClient.INSTANCE.createInstance(solApiKey, solApiSecret);
-        // Message 패키지가 중복될 경우 com.solapi.sdk.message.model.Message로 치환하여 주세요
-        Message message = new Message();
-        message.setFrom("01023294262");
-        message.setTo("01022638630");
-        message.setText("성준아 사랑해");
+    void createWaitingPersistsPhoneNumber() throws Exception {
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "010-1234-5678")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/waitings/*"));
 
-        try {
-            // send 메소드로 ArrayList<Message> 객체를 넣어도 동작합니다!
-            messageService.send(message);
-        } catch (SolapiMessageNotReceivedException exception) {
-            // 발송에 실패한 메시지 목록을 확인할 수 있습니다!
-            System.out.println(exception.getFailedMessageList());
-            System.out.println(exception.getMessage());
-        } catch (Exception exception) {
-            System.out.println(exception.getMessage());
-        }
+        Integer count = jdbcClient.sql("""
+                        select count(*)
+                        from waiting_entry
+                        where phone_number = '01012345678'
+                          and status = 'WAITING'
+                        """)
+                .query(Integer.class)
+                .single();
+
+        assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    void duplicateActivePhoneNumberIsRejected() throws Exception {
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "01012345679")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "010-1234-5679")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("waitings/new"))
+                .andExpect(model().attribute("errorMessage", "이미 웨이팅 중인 휴대폰 번호입니다."));
+
+        Integer count = jdbcClient.sql("""
+                        select count(*)
+                        from waiting_entry
+                        where phone_number = '01012345679'
+                        """)
+                .query(Integer.class)
+                .single();
+
+        assertThat(count).isEqualTo(1);
+    }
+
+    @Test
+    void canceledPhoneNumberCanRegisterAgain() throws Exception {
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "01012345670")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        Long id = jdbcClient.sql("""
+                        select id
+                        from waiting_entry
+                        where phone_number = '01012345670'
+                        """)
+                .query(Long.class)
+                .single();
+
+        mockMvc.perform(post("/waitings/{id}/cancel", id))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "01012345670")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        Integer count = jdbcClient.sql("""
+                        select count(*)
+                        from waiting_entry
+                        where phone_number = '01012345670'
+                        """)
+                .query(Integer.class)
+                .single();
+
+        assertThat(count).isEqualTo(2);
+    }
+
+    private void createWaiting(String phoneNumber) throws Exception {
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", phoneNumber)
+                        .param("consentAgreed", "true"))
+                .andExpect(status().is3xxRedirection());
     }
 }

@@ -1,8 +1,11 @@
 package com.odatour.waiting.web;
 
+import com.odatour.waiting.waiting.DuplicateActiveWaitingException;
+import com.odatour.waiting.waiting.WaitingEntry;
+import com.odatour.waiting.waiting.WaitingService;
+import com.odatour.waiting.waiting.WaitingStatus;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,47 +19,73 @@ public class WaitingPageController {
 
     private static final int PAGE_SIZE = 10;
 
+    private final WaitingService waitingService;
+
+    public WaitingPageController(WaitingService waitingService) {
+        this.waitingService = waitingService;
+    }
+
     @GetMapping("/")
     public String newWaiting(Model model) {
+        if (!model.containsAttribute("phoneNumber")) {
+            model.addAttribute("phoneNumber", "");
+        }
         model.addAttribute("estimatedWaitMinutes", 15);
         return "waitings/new";
     }
 
     @PostMapping("/waitings")
-    public String createWaiting() {
-        return "redirect:/waitings/13?status=WAITING";
+    public String createWaiting(
+            @RequestParam String phoneNumber,
+            @RequestParam(defaultValue = "false") boolean consentAgreed,
+            Model model
+    ) {
+        try {
+            WaitingEntry waiting = waitingService.createWaiting(phoneNumber, consentAgreed);
+            return "redirect:/waitings/" + waiting.id();
+        } catch (DuplicateActiveWaitingException exception) {
+            model.addAttribute("errorMessage", "이미 웨이팅 중인 휴대폰 번호입니다.");
+            model.addAttribute("activeWaitingId", exception.activeWaiting().id());
+            model.addAttribute("phoneNumber", phoneNumber);
+            model.addAttribute("estimatedWaitMinutes", 15);
+            return "waitings/new";
+        } catch (IllegalArgumentException exception) {
+            model.addAttribute("errorMessage", exception.getMessage());
+            model.addAttribute("phoneNumber", phoneNumber);
+            model.addAttribute("estimatedWaitMinutes", 15);
+            return "waitings/new";
+        }
     }
 
     @GetMapping("/waitings/{id}")
-    public String waitingStatus(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "CALLED") String status,
-            Model model
-    ) {
-        String normalizedStatus = normalizeStatus(status);
-        model.addAttribute("waiting", waitingStatusView(id, normalizedStatus));
+    public String waitingStatus(@PathVariable Long id, Model model) {
+        WaitingEntry waiting = waitingService.findWaiting(id);
+        List<WaitingEntry> activeWaitings = waitingService.activeWaitings();
+        model.addAttribute("waiting", waitingStatusView(waiting, activeWaitings));
         return "waitings/status";
     }
 
     @PostMapping("/waitings/{id}/cancel")
     public String cancelWaiting(@PathVariable Long id) {
-        return "redirect:/waitings/" + id + "?status=CANCELED";
+        waitingService.cancelWaiting(id);
+        return "redirect:/waitings/" + id;
     }
 
     @GetMapping("/admin/waitings")
     public String adminWaitings(@RequestParam(defaultValue = "1") int page, Model model) {
-        List<AdminWaitingRow> activeWaitings = activeWaitingRows();
-        PageView<AdminWaitingRow> pageView = paginate(activeWaitings, page);
+        List<WaitingEntry> activeWaitings = waitingService.activeWaitings();
+        List<AdminWaitingRow> activeWaitingRows = activeWaitingRows(activeWaitings);
+        PageView<AdminWaitingRow> pageView = paginate(activeWaitingRows, page);
 
         model.addAttribute("summary", new AdminSummary(
-                activeWaitings.size(),
-                countByStatus(activeWaitings, "WAITING"),
-                countByStatus(activeWaitings, "CALLED"),
+                activeWaitingRows.size(),
+                countByStatus(activeWaitingRows, WaitingStatus.WAITING.name()),
+                countByStatus(activeWaitingRows, WaitingStatus.CALLED.name()),
                 pageView.totalPages()
         ));
         model.addAttribute("waitings", pageView.items());
         model.addAttribute("page", pageView);
-        model.addAttribute("enteredCount", enteredWaitingRows().size());
+        model.addAttribute("enteredCount", waitingService.enteredWaitings().size());
         return "admin/waitings";
     }
 
@@ -66,122 +95,99 @@ public class WaitingPageController {
 
         model.addAttribute("enteredWaitings", pageView.items());
         model.addAttribute("page", pageView);
-        model.addAttribute("activeCount", activeWaitingRows().size());
+        model.addAttribute("activeCount", waitingService.activeWaitings().size());
         return "admin/entered-waitings";
     }
 
     @PostMapping("/admin/waitings/{id}/enter")
     public String enter(@PathVariable Long id) {
+        waitingService.enterWaiting(id);
         return "redirect:/admin/waitings";
     }
 
     @PostMapping("/admin/waitings/{id}/no-show")
     public String noShow(@PathVariable Long id) {
+        waitingService.noShowWaiting(id);
         return "redirect:/admin/waitings";
     }
 
-    private WaitingStatusView waitingStatusView(Long id, String status) {
-        return switch (status) {
-            case "WAITING" -> new WaitingStatusView(
-                    id,
-                    "010-****-1234",
-                    "WAITING",
-                    "대기 중",
-                    6,
-                    LocalDateTime.now().minusMinutes(3),
-                    "앞 순서가 가까워지면 SMS로 알려드립니다.",
-                    "6번째로 대기 중입니다",
-                    true
-            );
-            case "ENTERED" -> new WaitingStatusView(
-                    id,
-                    "010-****-1234",
-                    "ENTERED",
-                    "입장 완료",
-                    null,
-                    LocalDateTime.now().minusMinutes(25),
-                    "입장 처리가 완료되었습니다.",
-                    "입장 완료되었습니다",
-                    false
-            );
-            case "NO_SHOW" -> new WaitingStatusView(
-                    id,
-                    "010-****-1234",
-                    "NO_SHOW",
-                    "노쇼 처리",
-                    null,
-                    LocalDateTime.now().minusMinutes(25),
-                    "현장 관리자에 의해 노쇼 처리되었습니다.",
-                    "노쇼 처리되었습니다",
-                    false
-            );
-            case "CANCELED" -> new WaitingStatusView(
-                    id,
-                    "010-****-1234",
-                    "CANCELED",
-                    "취소 완료",
-                    null,
-                    LocalDateTime.now().minusMinutes(12),
-                    "웨이팅 취소가 완료되었습니다.",
-                    "웨이팅이 취소되었습니다",
-                    false
-            );
-            default -> new WaitingStatusView(
-                    id,
-                    "010-****-1234",
-                    "CALLED",
-                    "입장 준비",
-                    3,
-                    LocalDateTime.now().minusMinutes(8),
-                    "호출 SMS를 발송했습니다. 현장 직원 안내에 따라 입장해 주세요.",
-                    "3번째로 대기 중입니다",
-                    true
-            );
-        };
-    }
+    private WaitingStatusView waitingStatusView(WaitingEntry waiting, List<WaitingEntry> activeWaitings) {
+        Integer remainingCount = waiting.status().active()
+                ? waitingService.remainingCount(waiting, activeWaitings)
+                : null;
 
-    private String normalizeStatus(String status) {
-        return switch (status.toUpperCase(Locale.ROOT)) {
-            case "WAITING", "CALLED", "ENTERED", "NO_SHOW", "CANCELED" -> status.toUpperCase(Locale.ROOT);
-            default -> "CALLED";
-        };
-    }
-
-    private List<AdminWaitingRow> activeWaitingRows() {
-        LocalDateTime now = LocalDateTime.now();
-        return List.of(
-                new AdminWaitingRow(1L, "010-****-4412", "CALLED", "호출 완료", 0, now.minusMinutes(44), true),
-                new AdminWaitingRow(2L, "010-****-9021", "CALLED", "호출 완료", 1, now.minusMinutes(41), true),
-                new AdminWaitingRow(3L, "010-****-1188", "CALLED", "호출 완료", 2, now.minusMinutes(37), true),
-                new AdminWaitingRow(4L, "010-****-7730", "CALLED", "호출 완료", 3, now.minusMinutes(35), true),
-                new AdminWaitingRow(5L, "010-****-6350", "WAITING", "대기 중", 4, now.minusMinutes(31), true),
-                new AdminWaitingRow(6L, "010-****-0826", "WAITING", "대기 중", 5, now.minusMinutes(28), true),
-                new AdminWaitingRow(7L, "010-****-5720", "WAITING", "대기 중", 6, now.minusMinutes(24), true),
-                new AdminWaitingRow(8L, "010-****-3349", "WAITING", "대기 중", 7, now.minusMinutes(20), true),
-                new AdminWaitingRow(9L, "010-****-7811", "WAITING", "대기 중", 8, now.minusMinutes(17), true),
-                new AdminWaitingRow(10L, "010-****-4098", "WAITING", "대기 중", 9, now.minusMinutes(13), true),
-                new AdminWaitingRow(11L, "010-****-2604", "WAITING", "대기 중", 10, now.minusMinutes(9), true),
-                new AdminWaitingRow(12L, "010-****-9972", "WAITING", "대기 중", 11, now.minusMinutes(5), true),
-                new AdminWaitingRow(13L, "010-****-1234", "WAITING", "대기 중", 12, now.minusMinutes(2), true)
+        return new WaitingStatusView(
+                waiting.id(),
+                maskPhoneNumber(waiting.phoneNumber()),
+                waiting.status().name(),
+                waiting.status().label(),
+                remainingCount,
+                waiting.createdAt(),
+                notice(waiting.status(), remainingCount),
+                title(waiting.status(), remainingCount),
+                waiting.status().active()
         );
     }
 
+    private List<AdminWaitingRow> activeWaitingRows(List<WaitingEntry> activeWaitings) {
+        return IntStream.range(0, activeWaitings.size())
+                .mapToObj(index -> {
+                    WaitingEntry waiting = activeWaitings.get(index);
+                    return new AdminWaitingRow(
+                            waiting.id(),
+                            maskPhoneNumber(waiting.phoneNumber()),
+                            waiting.status().name(),
+                            waiting.status().label(),
+                            index,
+                            waiting.createdAt(),
+                            waiting.status().active()
+                    );
+                })
+                .toList();
+    }
+
     private List<AdminEnteredRow> enteredWaitingRows() {
-        LocalDateTime now = LocalDateTime.now();
-        return IntStream.rangeClosed(1, 12)
-                .mapToObj(index -> new AdminEnteredRow(
-                        100L + index,
-                        maskedPhoneNumber(index),
-                        "ENTERED",
-                        "입장 완료",
-                        now.minusMinutes(110L - index * 4L),
-                        now.minusMinutes(86L - index * 4L)
+        return waitingService.enteredWaitings().stream()
+                .map(waiting -> new AdminEnteredRow(
+                        waiting.id(),
+                        maskPhoneNumber(waiting.phoneNumber()),
+                        waiting.status().name(),
+                        waiting.status().label(),
+                        waiting.createdAt(),
+                        waiting.enteredAt()
                 ))
                 .toList();
     }
 
-    private String maskedPhoneNumber(int index) {
-        return "010-****-" + String.format("%04d", 2300 + index * 137);
+    private String title(WaitingStatus status, Integer remainingCount) {
+        return switch (status) {
+            case WAITING -> remainingCount == 0 ? "곧 입장 차례입니다" : remainingCount + "팀 앞에서 대기 중입니다";
+            case CALLED -> "입장 준비가 완료되었습니다";
+            case ENTERED -> "입장 완료되었습니다";
+            case NO_SHOW -> "노쇼 처리되었습니다";
+            case CANCELED -> "웨이팅이 취소되었습니다";
+        };
+    }
+
+    private String notice(WaitingStatus status, Integer remainingCount) {
+        return switch (status) {
+            case WAITING -> remainingCount == 0
+                    ? "현장 직원 안내에 따라 입장을 준비해 주세요."
+                    : "앞 순서가 가까워지면 SMS로 알려드립니다.";
+            case CALLED -> "호출 SMS를 발송했습니다. 현장 직원 안내에 따라 입장해 주세요.";
+            case ENTERED -> "입장 처리가 완료되었습니다.";
+            case NO_SHOW -> "현장 관리자에 의해 노쇼 처리되었습니다.";
+            case CANCELED -> "웨이팅 취소가 완료되었습니다.";
+        };
+    }
+
+    private String maskPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.length() < 7) {
+            return "****";
+        }
+        String prefix = phoneNumber.substring(0, Math.min(3, phoneNumber.length()));
+        String suffix = phoneNumber.substring(phoneNumber.length() - 4);
+        return prefix + "-****-" + suffix;
     }
 
     private long countByStatus(List<AdminWaitingRow> waitings, String status) {

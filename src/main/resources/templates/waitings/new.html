@@ -19,10 +19,16 @@
     </section>
 
     <form class="form-panel" th:action="@{/waitings}" method="post">
+        <div class="form-alert" th:if="${errorMessage != null}">
+            <strong th:text="${errorMessage}">등록할 수 없습니다.</strong>
+            <a th:if="${activeWaitingId != null}"
+               th:href="@{/waitings/{id}(id=${activeWaitingId})}">기존 웨이팅 확인</a>
+        </div>
+
         <label class="field">
             <span>휴대폰 번호</span>
             <input type="tel" name="phoneNumber" inputmode="numeric" autocomplete="tel"
-                   placeholder="01012345678" required>
+                   placeholder="01012345678" th:value="${phoneNumber}" required>
         </label>
 
         <label class="agree-box">
