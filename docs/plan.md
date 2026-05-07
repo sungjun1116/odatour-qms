@@ -43,16 +43,15 @@
 ### 작업
 
 1. 의존성 정리
-   - Spring Data JPA 추가
+   - Spring JDBC 추가
    - PostgreSQL JDBC Driver 추가
-   - Validation 추가
-   - 필요 시 Flyway 추가
+   - 테스트용 H2 추가
+   - 초기 스키마는 `schema.sql`로 관리
 
 2. Docker Compose 작성
-   - `app`
-   - `db`
+   - 로컬 개발용 `db`
    - PostgreSQL volume
-   - SOLAPI 환경 변수 자리 확보
+   - PostgreSQL 환경 변수 자리 확보
 
 3. 애플리케이션 설정
    - `application.yaml`에 datasource 설정
@@ -67,8 +66,8 @@
 5. Repository 구현
    - 진행 중 웨이팅 중복 등록 확인
    - 관리자 목록 조회
-   - 남은 순서 계산용 count query
-   - SMS 대상자 조회
+   - 입장 완료 목록 조회
+   - 상태 변경 처리
 
 6. Service 구현
    - 웨이팅 등록
@@ -110,7 +109,8 @@
 
 2. 웨이팅 등록 처리
    - `POST /waitings`
-   - 입력값 검증
+   - 휴대폰 번호 정규표현식 검증
+   - 휴대폰 번호 자동 하이픈 입력 보조
    - 중복 등록 시 안내 메시지 표시
    - 등록 성공 시 `/waitings/{id}`로 redirect
    - 등록 이벤트 후 SMS 대상자 계산
@@ -119,6 +119,7 @@
    - `GET /waitings/{id}`
    - 현재 상태 표시
    - 남은 순서 표시
+   - 예상 대기시간은 1팀당 3분으로 표시
    - 새로고침 버튼
    - 웨이팅 취소 버튼
    - 입장 완료/노쇼 상태 표시
