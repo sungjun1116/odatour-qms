@@ -1,4 +1,4 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.domain;
 
 public enum WaitingStatus {
     WAITING("대기 중"),

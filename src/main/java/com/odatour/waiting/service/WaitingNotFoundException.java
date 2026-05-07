@@ -1,4 +1,4 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.service;
 
 public class WaitingNotFoundException extends RuntimeException {
     public WaitingNotFoundException(Long id) {

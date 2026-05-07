@@ -1,4 +1,4 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.config;
 
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;

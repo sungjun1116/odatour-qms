@@ -1,9 +1,9 @@
-package com.odatour.waiting.web;
+package com.odatour.waiting.controller;
 
-import com.odatour.waiting.waiting.DuplicateActiveWaitingException;
-import com.odatour.waiting.waiting.WaitingEntry;
-import com.odatour.waiting.waiting.WaitingService;
-import com.odatour.waiting.waiting.WaitingStatus;
+import com.odatour.waiting.domain.WaitingEntry;
+import com.odatour.waiting.domain.WaitingStatus;
+import com.odatour.waiting.service.DuplicateActiveWaitingException;
+import com.odatour.waiting.service.WaitingService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;

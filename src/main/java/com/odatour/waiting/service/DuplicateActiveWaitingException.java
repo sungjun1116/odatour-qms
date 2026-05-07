@@ -1,4 +1,6 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.service;
+
+import com.odatour.waiting.domain.WaitingEntry;
 
 public class DuplicateActiveWaitingException extends RuntimeException {
     private final WaitingEntry activeWaiting;

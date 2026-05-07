@@ -1,4 +1,4 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.domain;
 
 import java.time.LocalDateTime;
 

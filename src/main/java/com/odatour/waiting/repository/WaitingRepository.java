@@ -1,5 +1,8 @@
-package com.odatour.waiting.waiting;
+package com.odatour.waiting.repository;
 
+import com.odatour.waiting.domain.WaitingEntry;
+import com.odatour.waiting.domain.WaitingStatus;
+import com.odatour.waiting.service.WaitingNotFoundException;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
