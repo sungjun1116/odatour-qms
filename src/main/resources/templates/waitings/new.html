@@ -28,7 +28,10 @@
         <label class="field">
             <span>휴대폰 번호</span>
             <input type="tel" name="phoneNumber" inputmode="numeric" autocomplete="tel"
-                   placeholder="01012345678" th:value="${phoneNumber}" required>
+                   data-phone-number-input maxlength="13"
+                   pattern="010[0-9]{8}|010-[0-9]{4}-[0-9]{4}"
+                   title="01012345678 또는 010-1234-5678 형식으로 입력해 주세요."
+                   placeholder="010-1234-5678" th:value="${phoneNumber}" required>
         </label>
 
         <label class="agree-box">
@@ -50,5 +53,26 @@
         <p>번호를 잘못 입력한 경우 관리자에게 말씀해 주세요.</p>
     </section>
 </main>
+<script>
+    document.querySelectorAll('[data-phone-number-input]').forEach((input) => {
+        const formatPhoneNumber = (value) => {
+            const digits = value.replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 3) {
+                return digits;
+            }
+            if (digits.length <= 7) {
+                return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+            }
+            return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+        };
+
+        const updateValue = () => {
+            input.value = formatPhoneNumber(input.value);
+        };
+
+        input.addEventListener('input', updateValue);
+        updateValue();
+    });
+</script>
 </body>
 </html>

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class WaitingService {
 
     private static final List<WaitingStatus> ACTIVE_STATUSES = List.of(WaitingStatus.WAITING, WaitingStatus.CALLED);
+    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile("^(010\\d{8}|010-\\d{4}-\\d{4})$");
 
     private final WaitingRepository waitingRepository;
     private final Clock clock;
@@ -22,14 +24,18 @@ public class WaitingService {
 
     @Transactional
     public WaitingEntry createWaiting(String rawPhoneNumber, boolean consentAgreed) {
-        String phoneNumber = normalizePhoneNumber(rawPhoneNumber);
-        if (phoneNumber.isBlank()) {
+        String trimmedPhoneNumber = rawPhoneNumber == null ? "" : rawPhoneNumber.trim();
+        if (trimmedPhoneNumber.isBlank()) {
             throw new IllegalArgumentException("휴대폰 번호를 입력해 주세요.");
+        }
+        if (!PHONE_NUMBER_PATTERN.matcher(trimmedPhoneNumber).matches()) {
+            throw new IllegalArgumentException("휴대폰 번호 형식이 올바르지 않습니다.");
         }
         if (!consentAgreed) {
             throw new IllegalArgumentException("개인정보 수집 및 이용에 동의해 주세요.");
         }
 
+        String phoneNumber = normalizePhoneNumber(trimmedPhoneNumber);
         Optional<WaitingEntry> activeWaiting = waitingRepository.findFirstByPhoneNumberAndStatuses(
                 phoneNumber,
                 ACTIVE_STATUSES

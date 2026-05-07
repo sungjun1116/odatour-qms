@@ -84,6 +84,22 @@ class OdatourWaitingSystemApplicationTests {
     }
 
     @Test
+    void invalidPhoneNumberIsRejected() throws Exception {
+        mockMvc.perform(post("/waitings")
+                        .param("phoneNumber", "010-123-5678")
+                        .param("consentAgreed", "true"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("waitings/new"))
+                .andExpect(model().attribute("errorMessage", "휴대폰 번호 형식이 올바르지 않습니다."));
+
+        Integer count = jdbcClient.sql("select count(*) from waiting_entry")
+                .query(Integer.class)
+                .single();
+
+        assertThat(count).isZero();
+    }
+
+    @Test
     void canceledPhoneNumberCanRegisterAgain() throws Exception {
         mockMvc.perform(post("/waitings")
                         .param("phoneNumber", "01012345670")
