@@ -23,6 +23,8 @@ Repository Settings > Secrets and variables > Actions에 아래 값을 등록한
 | `OCI_SSH_PRIVATE_KEY` | 배포 서버 접속용 private key 전체 내용 |
 | `OCI_PORT` | SSH 포트. 기본값이 22여도 현재 workflow에서는 값을 등록한다 |
 
+현재 OCI 서버가 ARM64이므로 workflow는 `APP_PLATFORM=linux/arm64`로 Docker 이미지를 빌드한다. 서버 아키텍처가 바뀌면 `.github/workflows/deploy.yml`의 `APP_PLATFORM`을 바꾼다.
+
 ## 서버 준비
 
 서버에는 Docker Engine과 Docker Compose plugin이 설치되어 있어야 한다.
@@ -35,7 +37,7 @@ docker compose version
 배포 디렉터리는 workflow의 `DEPLOY_DIR` 값과 맞춘다.
 
 ```bash
-mkdir -p /home/ociax/app
+mkdir -p /home/ociax/app/odatour-qms
 ```
 
 배포 사용자가 `docker` 명령을 실행할 수 있어야 한다. 일반적으로 배포 사용자를 `docker` 그룹에 추가한다.
@@ -48,7 +50,7 @@ sudo usermod -aG docker ociax
 
 ## 서버 환경 변수
 
-서버의 `/home/ociax/app/.env`를 만든다. `.env.example`을 기준으로 실제 값을 채운다.
+서버의 `/home/ociax/app/odatour-qms/.env`를 만든다. `.env.example`을 기준으로 실제 값을 채운다.
 
 ```properties
 APP_PORT=8080
@@ -77,7 +79,7 @@ POSTGRES_PASSWORD=change-me
 서버에서 수동으로 상태를 확인하려면:
 
 ```bash
-cd /home/ociax/app
+cd /home/ociax/app/odatour-qms
 docker compose ps
 docker compose logs -f app
 ```
@@ -85,14 +87,14 @@ docker compose logs -f app
 수동 재시작은 아래처럼 한다.
 
 ```bash
-cd /home/ociax/app
+cd /home/ociax/app/odatour-qms
 docker compose restart app
 ```
 
 서버에서 수동으로 compose를 다시 올릴 때도 아래처럼 실행한다.
 
 ```bash
-cd /home/ociax/app
+cd /home/ociax/app/odatour-qms
 docker compose up -d
 ```
 
