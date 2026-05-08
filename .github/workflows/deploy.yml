@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  APP_IMAGE: odatour-waiting-system:latest
+  APP_IMAGE: odatour-qms:latest
   APP_IMAGE_TAR: odatour-waiting-system-image.tar
   DEPLOY_DIR: /home/ociax/app
   SSH_PORT: ${{ secrets.OCI_PORT }}

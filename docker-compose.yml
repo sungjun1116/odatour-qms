@@ -1,8 +1,6 @@
 services:
   app:
     image: ${APP_IMAGE}
-    build:
-      context: .
     container_name: odatour-qms-app
     ports:
       - ${APP_PORT}:8080
