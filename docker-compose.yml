@@ -1,9 +1,25 @@
 services:
+  app:
+    image: ${APP_IMAGE}
+    build:
+      context: .
+    container_name: odatour-qms-app
+    ports:
+      - ${APP_PORT}:8080
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${POSTGRES_PORT}/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
     image: postgres:16
-    container_name: odatour-waiting-postgres
+    container_name: odatour-qms-db
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_BIND}:${POSTGRES_PORT}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -15,6 +31,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres-data:

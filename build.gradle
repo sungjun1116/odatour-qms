@@ -6,7 +6,7 @@ plugins {
 
 group = 'com.odatour'
 version = '0.0.1-SNAPSHOT'
-description = 'odatour-waiting-system'
+description = 'odatour-qms'
 
 java {
     toolchain {
