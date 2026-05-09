@@ -8,7 +8,6 @@
 | --- | --- |
 | `Dockerfile` | Spring Boot 애플리케이션 컨테이너 이미지 빌드 |
 | `docker-compose.yml` | 서버에서 이미 빌드된 `app` 이미지와 `db` 서비스를 실행 |
-| `docker-compose.build.yml` | 로컬에서 compose로 앱 이미지를 직접 빌드할 때 사용하는 override |
 | `.github/workflows/deploy.yml` | 테스트, 이미지 빌드, OCI 서버 업로드, compose 배포 |
 | `.env.example` | 서버 `.env`에 필요한 값 예시 |
 
@@ -67,6 +66,14 @@ POSTGRES_PASSWORD=change-me
 
 `APP_IMAGE`는 GitHub Actions의 `APP_IMAGE` 값과 같아야 한다. 현재 workflow는 `odatour-qms:latest` 이미지를 빌드하고 서버에서 `docker load`한다. 서버 `.env`에 다른 태그가 들어 있으면 `docker compose up -d`가 로컬에 없는 이미지를 pull하려고 시도한다.
 
+## 로컬 실행
+
+로컬에서는 Docker 없이 Gradle로 애플리케이션을 실행한다. `SPRING_DATASOURCE_URL`을 따로 지정하지 않으면 파일 기반 H2 DB가 `.local-data/` 아래에 생성된다.
+
+```bash
+./gradlew bootRun
+```
+
 ## 배포 흐름
 
 `main` 브랜치에 push하거나 workflow를 수동 실행하면 아래 순서로 진행된다.
@@ -96,12 +103,6 @@ docker compose restart app
 ```bash
 cd /home/ociax/app/odatour-qms
 docker compose up -d
-```
-
-서버 배포용 `docker-compose.yml`에는 `build` 설정이 없으므로 서버에 Dockerfile과 소스 전체를 둘 필요가 없다. 로컬에서 compose로 이미지를 직접 빌드해야 할 때는 아래처럼 override 파일을 같이 사용한다.
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
 ## 방화벽
