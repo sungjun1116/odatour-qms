@@ -4,9 +4,22 @@ spring:
   application:
     name: odatour-waiting-system
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./.local-data/odatour-waiting;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  h2:
+    console:
+      enabled: ${SPRING_H2_CONSOLE_ENABLED:true}
+      path: /h2-console
   sql:
     init:
       mode: always
+
+solapi:
+  api-key: ${SOLAPI_API_KEY:}
+  api-secret-key: ${SOLAPI_API_SECRET_KEY:}
+  from: ${SOLAPI_FROM:}
+  kakao:
+    pf-id: ${SOLAPI_KAKAO_PF_ID:}
+    template-id: ${SOLAPI_KAKAO_TEMPLATE_ID:}
+    disable-sms: ${SOLAPI_KAKAO_DISABLE_SMS:true}

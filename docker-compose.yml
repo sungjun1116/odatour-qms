@@ -7,9 +7,16 @@ services:
     environment:
       TZ: Asia/Seoul
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:${POSTGRES_PORT}/${POSTGRES_DB}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_H2_CONSOLE_ENABLED: "false"
+      SOLAPI_API_KEY: ${SOLAPI_API_KEY}
+      SOLAPI_API_SECRET_KEY: ${SOLAPI_API_SECRET_KEY}
+      SOLAPI_FROM: ${SOLAPI_FROM}
+      SOLAPI_KAKAO_PF_ID: ${SOLAPI_KAKAO_PF_ID}
+      SOLAPI_KAKAO_TEMPLATE_ID: ${SOLAPI_KAKAO_TEMPLATE_ID}
+      SOLAPI_KAKAO_DISABLE_SMS: ${SOLAPI_KAKAO_DISABLE_SMS:-true}
     depends_on:
       db:
         condition: service_healthy
