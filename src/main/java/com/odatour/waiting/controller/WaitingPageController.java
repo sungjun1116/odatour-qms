@@ -207,7 +207,7 @@ public class WaitingPageController {
                     waiting.status() == WaitingStatus.WAITING && waiting.notifiedAt() == null,
                     waiting.status() == WaitingStatus.CALLED,
                     waiting.status() == WaitingStatus.ARRIVED,
-                    waiting.status() == WaitingStatus.CALLED,
+                    waiting.status() == WaitingStatus.CALLED || waiting.status() == WaitingStatus.ARRIVED,
                     waiting.status() == WaitingStatus.WAITING,
                     waiting.status().active()
             ));

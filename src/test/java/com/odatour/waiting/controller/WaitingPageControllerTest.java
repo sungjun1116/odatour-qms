@@ -269,7 +269,8 @@ class WaitingPageControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("호출 후 경과"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("호출 후 10분 경과"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">현장도착 확인</button>"))))
-                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">노쇼</button>"))))
+                .andExpect(content().string(containsString(">노쇼</button>")))
+                .andExpect(content().string(containsString("이 고객을 노쇼 처리할까요?")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">취소처리</button>"))));
     }
 

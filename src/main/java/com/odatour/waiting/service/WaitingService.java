@@ -105,8 +105,13 @@ public class WaitingService {
     public void noShowWaiting(Long id) {
         WaitingEntry waiting = waitingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new WaitingNotFoundException(id));
-        if (waiting.status() == WaitingStatus.CALLED) {
-            waitingRepository.updateStatus(id, List.of(WaitingStatus.CALLED), WaitingStatus.NO_SHOWED, now());
+        if (waiting.status() == WaitingStatus.CALLED || waiting.status() == WaitingStatus.ARRIVED) {
+            waitingRepository.updateStatus(
+                    id,
+                    List.of(WaitingStatus.CALLED, WaitingStatus.ARRIVED),
+                    WaitingStatus.NO_SHOWED,
+                    now()
+            );
         }
     }
 

@@ -226,6 +226,16 @@ class WaitingServiceTest {
     }
 
     @Test
+    void noShowWaitingMarksArrivedWaitingAsNoShowed() {
+        WaitingEntry waiting = waitingService.createWaiting("01012345678", true);
+        waitingService.notifyWaiting(waiting.id());
+        waitingService.arriveWaiting(waiting.id());
+
+        waitingService.noShowWaiting(waiting.id());
+        assertThat(waitingService.findWaiting(waiting.id()).status()).isEqualTo(WaitingStatus.NO_SHOWED);
+    }
+
+    @Test
     void notifyShortageWaitingsCallsWaitingUpToCalledAndArrivedQueueShortage() {
         WaitingEntry first = waitingService.createWaiting("01012345678", true);
         WaitingEntry second = waitingService.createWaiting("01012345679", true);
