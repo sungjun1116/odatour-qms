@@ -41,7 +41,7 @@ public class WaitingPageController {
         if (!model.containsAttribute("phoneNumber")) {
             model.addAttribute("phoneNumber", "");
         }
-        model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
+        addNewWaitingMetrics(model);
         return "waitings/new";
     }
 
@@ -58,12 +58,12 @@ public class WaitingPageController {
             model.addAttribute("errorMessage", "이미 웨이팅 중인 휴대폰 번호입니다.");
             model.addAttribute("activeWaitingId", exception.activeWaiting().id());
             model.addAttribute("phoneNumber", phoneNumber);
-            model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
+            addNewWaitingMetrics(model);
             return "waitings/new";
         } catch (IllegalArgumentException exception) {
             model.addAttribute("errorMessage", exception.getMessage());
             model.addAttribute("phoneNumber", phoneNumber);
-            model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(waitingService.activeWaitings().size()));
+            addNewWaitingMetrics(model);
             return "waitings/new";
         }
     }
@@ -297,6 +297,12 @@ public class WaitingPageController {
             return 0;
         }
         return Math.max(teamCount, 0) * ESTIMATED_WAIT_MINUTES_PER_TEAM;
+    }
+
+    private void addNewWaitingMetrics(Model model) {
+        int estimatedWaitTeams = waitingService.activeWaitings().size();
+        model.addAttribute("estimatedWaitTeams", estimatedWaitTeams);
+        model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(estimatedWaitTeams));
     }
 
     private String maskPhoneNumber(String phoneNumber) {

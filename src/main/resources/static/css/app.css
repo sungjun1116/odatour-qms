@@ -1,16 +1,18 @@
 :root {
-    --bg: #f5f7fb;
+    --bg: #f7f8fb;
     --surface: #ffffff;
-    --surface-strong: #111827;
-    --text: #152033;
-    --muted: #667085;
-    --line: #dce3ee;
-    --primary: #0f766e;
-    --primary-strong: #115e59;
-    --accent: #f59e0b;
-    --danger: #dc2626;
-    --success: #15803d;
-    --shadow: 0 20px 50px rgba(21, 32, 51, 0.12);
+    --surface-strong: #111111;
+    --text: #202124;
+    --muted: #6f747b;
+    --line: #e4e7ec;
+    --primary: #111111;
+    --primary-strong: #000000;
+    --brand-blue: #1a9af7;
+    --accent: #ffd84d;
+    --accent-strong: #f4c400;
+    --danger: #e5483f;
+    --success: #179c6a;
+    --shadow: 0 22px 46px rgba(17, 17, 17, 0.08);
 }
 
 * {
@@ -22,8 +24,10 @@ body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     color: var(--text);
     background:
-        linear-gradient(180deg, rgba(15, 118, 110, 0.10), transparent 280px),
+        radial-gradient(circle at 18px 18px, rgba(255, 216, 77, 0.36) 0 2px, transparent 2px 100%),
+        linear-gradient(180deg, rgba(26, 154, 247, 0.10), transparent 260px),
         var(--bg);
+    background-size: 28px 28px, auto, auto;
 }
 
 button,
@@ -42,17 +46,38 @@ input {
 .mobile-shell {
     width: min(100%, 480px);
     margin: 0 auto;
-    padding: 28px 18px 40px;
+    padding: 22px 18px 40px;
 }
 
 .hero-panel,
 .status-hero {
-    padding: 30px 4px 22px;
+    padding: 24px 4px 22px;
+}
+
+.oda-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 26px;
+    padding: 6px 0;
+}
+
+.oda-brand img {
+    display: block;
+    width: 34px;
+    height: 34px;
+}
+
+.oda-brand strong {
+    color: var(--surface-strong);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0;
 }
 
 .eyebrow {
     margin: 0 0 10px;
-    color: var(--primary);
+    color: var(--brand-blue);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0;
@@ -74,14 +99,15 @@ h1 {
 }
 
 .hero-metric {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     margin-top: 24px;
     padding: 16px 18px;
-    border: 1px solid rgba(15, 118, 110, 0.18);
+    border: 1px solid rgba(17, 17, 17, 0.12);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.74);
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(17, 17, 17, 0.07);
 }
 
 .hero-metric span,
@@ -93,7 +119,9 @@ h1 {
 }
 
 .hero-metric strong {
-    color: var(--primary-strong);
+    display: block;
+    margin-top: 4px;
+    color: var(--surface-strong);
     font-size: 20px;
 }
 
@@ -131,9 +159,9 @@ h1 {
 }
 
 .form-alert.success {
-    border-color: rgba(22, 163, 74, 0.24);
-    background: #f0fdf4;
-    color: #166534;
+    border-color: rgba(23, 156, 106, 0.24);
+    background: #eefcf6;
+    color: #087a4f;
 }
 
 .field {
@@ -159,8 +187,8 @@ h1 {
 }
 
 .field input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 4px rgba(26, 154, 247, 0.14);
 }
 
 .agree-box {
@@ -177,7 +205,7 @@ h1 {
     width: 20px;
     height: 20px;
     margin: 1px 0 0;
-    accent-color: var(--primary);
+    accent-color: var(--brand-blue);
 }
 
 .agree-box span {
@@ -211,14 +239,16 @@ h1 {
 
 .primary-button {
     width: 100%;
-    background: var(--primary);
-    color: #fff;
+    background: var(--accent);
+    color: var(--surface-strong);
     font-size: 16px;
+    box-shadow: 0 14px 28px rgba(244, 196, 0, 0.22);
 }
 
 .primary-button:hover,
 .small-button:hover {
-    background: var(--primary-strong);
+    background: var(--accent-strong);
+    color: var(--surface-strong);
 }
 
 .small-button:disabled {
@@ -276,13 +306,13 @@ h1 {
 
 .info-label,
 .queue-number {
-    color: var(--primary);
+    color: var(--brand-blue);
     font-size: 12px;
     font-weight: 800;
 }
 
 .status-hero h1 span {
-    color: var(--primary);
+    color: var(--brand-blue);
 }
 
 .status-badge {
@@ -299,23 +329,23 @@ h1 {
 }
 
 .status-waiting {
-    background: #fff7ed;
-    color: #c2410c;
+    background: #fff7c2;
+    color: #7c5a00;
 }
 
 .status-called {
-    background: #ecfdf5;
-    color: var(--success);
+    background: #eaf6ff;
+    color: #006fba;
 }
 
 .status-arrived {
-    background: #f0f9ff;
-    color: #0369a1;
+    background: #f2f2f2;
+    color: var(--surface-strong);
 }
 
 .status-entered {
-    background: #eff6ff;
-    color: #1d4ed8;
+    background: #eefcf6;
+    color: #087a4f;
 }
 
 .status-no_showed {
@@ -352,7 +382,9 @@ h1 {
 }
 
 .admin-page {
-    background: #f4f6f8;
+    background:
+        linear-gradient(180deg, rgba(26, 154, 247, 0.08), transparent 220px),
+        #f4f6f8;
 }
 
 .admin-shell {
@@ -421,7 +453,7 @@ h1 {
 }
 
 .tab-link.active {
-    border-bottom-color: var(--primary);
+    border-bottom-color: var(--accent);
     color: var(--primary-strong);
 }
 
@@ -577,11 +609,11 @@ h1 {
 }
 
 .action-button.notify {
-    background: #0f766e;
+    background: var(--brand-blue);
 }
 
 .action-button.arrive {
-    background: #0369a1;
+    background: var(--primary);
 }
 
 .action-button.no-show {
@@ -619,9 +651,9 @@ h1 {
 }
 
 .page-number.active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #fff;
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--surface-strong);
 }
 
 .page-link.disabled {

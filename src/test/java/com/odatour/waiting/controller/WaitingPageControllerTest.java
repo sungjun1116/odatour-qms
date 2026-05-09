@@ -57,7 +57,10 @@ class WaitingPageControllerTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("waitings/new"))
+                .andExpect(model().attribute("estimatedWaitTeams", 2))
                 .andExpect(model().attribute("estimatedWaitMinutes", 6))
+                .andExpect(content().string(containsString("VR 웨이팅 등록")))
+                .andExpect(content().string(containsString("현재 대기팀")))
                 .andExpect(content().string(containsString("data-phone-number-input")))
                 .andExpect(content().string(containsString("pattern=\"010[0-9]{8}|010-[0-9]{4}-[0-9]{4}\"")));
     }
