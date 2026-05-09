@@ -61,6 +61,18 @@ public class WaitingRepository {
                 .optional();
     }
 
+    public Optional<WaitingEntry> findByIdForUpdate(Long id) {
+        return jdbcClient.sql("""
+                        select *
+                        from waiting_entry
+                        where id = :id
+                        for update
+                        """)
+                .param("id", id)
+                .query(this::map)
+                .optional();
+    }
+
     public Optional<WaitingEntry> findFirstByPhoneNumberAndStatuses(String phoneNumber, Collection<WaitingStatus> statuses) {
         return jdbcClient.sql("""
                         select *
@@ -100,11 +112,12 @@ public class WaitingRepository {
                 .list();
     }
 
-    public int updateStatus(Long id, WaitingStatus expectedStatus1, WaitingStatus expectedStatus2,
-                            WaitingStatus nextStatus, LocalDateTime now) {
+    public int updateStatus(Long id, Collection<WaitingStatus> expectedStatuses, WaitingStatus nextStatus,
+                            LocalDateTime now) {
         String timestampColumn = switch (nextStatus) {
+            case ARRIVED -> "arrived_at";
             case ENTERED -> "entered_at";
-            case NO_SHOW -> "no_show_at";
+            case NO_SHOWED -> "no_show_at";
             case CANCELED -> "canceled_at";
             default -> throw new IllegalArgumentException("Unsupported status transition: " + nextStatus);
         };
@@ -121,7 +134,25 @@ public class WaitingRepository {
                 .param("updatedAt", now)
                 .param("eventAt", now)
                 .param("id", id)
-                .param("expectedStatuses", List.of(expectedStatus1.name(), expectedStatus2.name()))
+                .param("expectedStatuses", expectedStatuses.stream().map(WaitingStatus::name).toList())
+                .update();
+    }
+
+    public int markNotified(Long id, LocalDateTime now) {
+        return jdbcClient.sql("""
+                        update waiting_entry
+                        set status = :nextStatus,
+                            notified_at = :notifiedAt,
+                            updated_at = :updatedAt
+                        where id = :id
+                          and status = :expectedStatus
+                          and notified_at is null
+                        """)
+                .param("nextStatus", WaitingStatus.CALLED.name())
+                .param("notifiedAt", now)
+                .param("updatedAt", now)
+                .param("id", id)
+                .param("expectedStatus", WaitingStatus.WAITING.name())
                 .update();
     }
 
@@ -132,6 +163,7 @@ public class WaitingRepository {
                 rs.getBoolean("consent_agreed"),
                 WaitingStatus.valueOf(rs.getString("status")),
                 rs.getTimestamp("notified_at") == null ? null : rs.getTimestamp("notified_at").toLocalDateTime(),
+                rs.getTimestamp("arrived_at") == null ? null : rs.getTimestamp("arrived_at").toLocalDateTime(),
                 rs.getTimestamp("entered_at") == null ? null : rs.getTimestamp("entered_at").toLocalDateTime(),
                 rs.getTimestamp("no_show_at") == null ? null : rs.getTimestamp("no_show_at").toLocalDateTime(),
                 rs.getTimestamp("canceled_at") == null ? null : rs.getTimestamp("canceled_at").toLocalDateTime(),

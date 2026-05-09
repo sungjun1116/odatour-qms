@@ -13,7 +13,7 @@
         <div class="status-badge" th:classappend="| status-${waiting.status.toLowerCase()}|"
              th:text="${waiting.statusLabel}">입장 준비</div>
         <h1 th:text="${waiting.title}">3번째로 대기 중입니다</h1>
-        <p class="lead" th:text="${waiting.notice}">앞 순서가 가까워지면 SMS로 알려드립니다.</p>
+        <p class="lead" th:text="${waiting.notice}">앞 순서가 가까워지면 카카오 알림톡으로 알려드립니다.</p>
     </section>
 
     <section class="ticket-panel">

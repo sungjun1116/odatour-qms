@@ -4,12 +4,20 @@ create table if not exists waiting_entry (
     consent_agreed boolean not null,
     status varchar(20) not null,
     notified_at timestamp,
+    arrived_at timestamp,
     entered_at timestamp,
     no_show_at timestamp,
     canceled_at timestamp,
     created_at timestamp not null,
     updated_at timestamp not null
 );
+
+alter table waiting_entry
+    add column if not exists arrived_at timestamp;
+
+update waiting_entry
+set status = 'NO_SHOWED'
+where status = 'NO_SHOW';
 
 create index if not exists idx_waiting_entry_active_order
     on waiting_entry (status, created_at, id);

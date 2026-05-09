@@ -1,11 +1,12 @@
 package com.odatour.waiting.domain;
 
 public enum WaitingStatus {
-    WAITING("대기 중"),
-    CALLED("호출 완료"),
-    ENTERED("입장 완료"),
-    NO_SHOW("노쇼 처리"),
-    CANCELED("취소 완료");
+    WAITING("대기중"),
+    CALLED("호출됨"),
+    ARRIVED("현장도착"),
+    ENTERED("입장완료"),
+    NO_SHOWED("노쇼"),
+    CANCELED("취소");
 
     private final String label;
 
@@ -18,6 +19,10 @@ public enum WaitingStatus {
     }
 
     public boolean active() {
-        return this == WAITING || this == CALLED;
+        return this == WAITING || this == CALLED || this == ARRIVED;
+    }
+
+    public boolean cancellable() {
+        return this == WAITING;
     }
 }

@@ -8,6 +8,7 @@ public record WaitingEntry(
         boolean consentAgreed,
         WaitingStatus status,
         LocalDateTime notifiedAt,
+        LocalDateTime arrivedAt,
         LocalDateTime enteredAt,
         LocalDateTime noShowAt,
         LocalDateTime canceledAt,

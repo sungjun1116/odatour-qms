@@ -12,11 +12,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.odatour.waiting.controller.view.WaitingStatusView;
+import com.odatour.waiting.domain.WaitingEntry;
+import com.odatour.waiting.notification.WaitingNotificationSender;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,9 +40,13 @@ class WaitingPageControllerTest {
     @Autowired
     private JdbcClient jdbcClient;
 
+    @Autowired
+    private TestWaitingNotificationSender waitingNotificationSender;
+
     @BeforeEach
     void cleanDatabase() {
         jdbcClient.sql("delete from waiting_entry").update();
+        waitingNotificationSender.clear();
     }
 
     @Test
@@ -121,13 +133,43 @@ class WaitingPageControllerTest {
         mockMvc.perform(get("/admin/waitings"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/waitings"))
-                .andExpect(model().attributeExists("summary", "waitings", "page", "enteredCount"));
+                .andExpect(model().attributeExists(
+                        "summary",
+                        "waitings",
+                        "sectionHeadings",
+                        "page",
+                        "enteredCount",
+                        "boothQueueCapacity",
+                        "boothQueueCount",
+                        "callShortageCount"
+                ))
+                .andExpect(content().string(containsString("호출하기")))
+                .andExpect(content().string(containsString("취소처리")))
+                .andExpect(content().string(containsString("이 고객을 호출 처리할까요?")))
+                .andExpect(content().string(containsString("부족 인원을 호출 처리할까요?")));
+    }
+
+    @Test
+    void notifyWaitingRedirectsToAdminWaitingsAndMarksCalled() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(waitingNotificationSender.sentWaitingIds()).containsExactly(id);
+        assertThat(findStatusById(id)).isEqualTo("CALLED");
     }
 
     @Test
     void adminEnteredWaitingsShowsEnteredRows() throws Exception {
         createWaiting("01012345678");
         Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/admin/waitings/{id}/arrive", id))
+                .andExpect(status().is3xxRedirection());
         mockMvc.perform(post("/admin/waitings/{id}/enter", id))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/waitings"));
@@ -139,13 +181,111 @@ class WaitingPageControllerTest {
     }
 
     @Test
+    void arriveWaitingRedirectsToAdminWaitingsAndMarksArrived() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(post("/admin/waitings/{id}/arrive", id))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(findStatusById(id)).isEqualTo("ARRIVED");
+    }
+
+    @Test
     void noShowWaitingRedirectsToAdminWaitings() throws Exception {
         createWaiting("01012345678");
         Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+        makeCallOverdue(id);
 
         mockMvc.perform(post("/admin/waitings/{id}/no-show", id))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(findStatusById(id)).isEqualTo("NO_SHOWED");
+    }
+
+    @Test
+    void adminCancelWaitingRedirectsToAdminWaitingsAndMarksCanceled() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+
+        mockMvc.perform(post("/admin/waitings/{id}/cancel", id))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(findStatusById(id)).isEqualTo("CANCELED");
+    }
+
+    @Test
+    void adminWaitingsShowsCalledActionsAndOverdueLabelAfterTenMinutes() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/admin/waitings"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("CALLED 고객")))
+                .andExpect(content().string(containsString("/js/admin-waitings.js")))
+                .andExpect(content().string(containsString("data-called-at=")))
+                .andExpect(content().string(containsString("호출 후 경과")))
+                .andExpect(content().string(containsString(">현장도착 확인</button>")))
+                .andExpect(content().string(containsString("이 고객을 현장도착 처리할까요?")))
+                .andExpect(content().string(containsString(">노쇼</button>")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">입장완료</button>"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">취소처리</button>"))))
+                .andExpect(content().string(containsString("overdue-label  hidden")));
+
+        makeCallOverdue(id);
+
+        mockMvc.perform(get("/admin/waitings"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("호출 후 10분 경과")))
+                .andExpect(content().string(containsString("이 고객을 노쇼 처리할까요?")))
+                .andExpect(content().string(containsString(">노쇼</button>")));
+    }
+
+    @Test
+    void adminWaitingsShowsEnterOnlyForArrivedCustomer() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+        makeCallOverdue(id);
+        mockMvc.perform(post("/admin/waitings/{id}/arrive", id))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/admin/waitings"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("ARRIVED 고객")))
+                .andExpect(content().string(containsString(">입장완료</button>")))
+                .andExpect(content().string(containsString("이 고객을 입장 완료 처리할까요?")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("data-called-at="))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("호출 후 경과"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("호출 후 10분 경과"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">현장도착 확인</button>"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">노쇼</button>"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">취소처리</button>"))));
+    }
+
+    @Test
+    void notifyShortageCallsWaitingCustomers() throws Exception {
+        createWaiting("01012345678");
+        createWaiting("01012345679");
+
+        mockMvc.perform(post("/admin/waitings/notify-shortage"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(waitingNotificationSender.sentWaitingIds()).containsExactly(
+                findIdByPhoneNumber("01012345678"),
+                findIdByPhoneNumber("01012345679")
+        );
     }
 
     private void createWaiting(String phoneNumber) throws Exception {
@@ -164,5 +304,55 @@ class WaitingPageControllerTest {
                 .param("phoneNumber", phoneNumber)
                 .query(Long.class)
                 .single();
+    }
+
+    private String findStatusById(Long id) {
+        return jdbcClient.sql("""
+                        select status
+                        from waiting_entry
+                        where id = :id
+                        """)
+                .param("id", id)
+                .query(String.class)
+                .single();
+    }
+
+    private void makeCallOverdue(Long id) {
+        jdbcClient.sql("""
+                        update waiting_entry
+                        set notified_at = :notifiedAt
+                        where id = :id
+                        """)
+                .param("notifiedAt", LocalDateTime.now().minusMinutes(10))
+                .param("id", id)
+                .update();
+    }
+
+    @TestConfiguration
+    static class NotificationTestConfiguration {
+
+        @Bean
+        @Primary
+        TestWaitingNotificationSender testWaitingNotificationSender() {
+            return new TestWaitingNotificationSender();
+        }
+    }
+
+    static class TestWaitingNotificationSender implements WaitingNotificationSender {
+
+        private final List<Long> sentWaitingIds = new ArrayList<>();
+
+        @Override
+        public void sendCall(WaitingEntry waiting) {
+            sentWaitingIds.add(waiting.id());
+        }
+
+        List<Long> sentWaitingIds() {
+            return sentWaitingIds;
+        }
+
+        void clear() {
+            sentWaitingIds.clear();
+        }
     }
 }

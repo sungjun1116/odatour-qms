@@ -4,6 +4,7 @@ public record AdminSummary(
         int total,
         long waiting,
         long called,
+        long arrived,
         int totalPages
 ) {
 }

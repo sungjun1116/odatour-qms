@@ -9,6 +9,14 @@ public record AdminWaitingRow(
         String statusLabel,
         Integer remainingCount,
         LocalDateTime createdAt,
+        LocalDateTime notifiedAt,
+        String callElapsedLabel,
+        boolean callOverdue,
+        boolean notifiable,
+        boolean arrivable,
+        boolean enterable,
+        boolean noShowable,
+        boolean cancelable,
         boolean actionable
 ) {
 }

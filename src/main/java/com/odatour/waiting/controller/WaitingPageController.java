@@ -7,9 +7,14 @@ import com.odatour.waiting.controller.view.PageView;
 import com.odatour.waiting.controller.view.WaitingStatusView;
 import com.odatour.waiting.domain.WaitingEntry;
 import com.odatour.waiting.domain.WaitingStatus;
+import com.odatour.waiting.notification.WaitingNotificationFailedException;
 import com.odatour.waiting.service.DuplicateActiveWaitingException;
 import com.odatour.waiting.service.WaitingService;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class WaitingPageController {
@@ -79,18 +85,23 @@ public class WaitingPageController {
     @GetMapping("/admin/waitings")
     public String adminWaitings(@RequestParam(defaultValue = "1") int page, Model model) {
         List<WaitingEntry> activeWaitings = waitingService.activeWaitings();
-        List<AdminWaitingRow> activeWaitingRows = activeWaitingRows(activeWaitings);
+        List<AdminWaitingRow> activeWaitingRows = groupedActiveWaitingRows(activeWaitings);
         PageView<AdminWaitingRow> pageView = paginate(activeWaitingRows, page);
 
         model.addAttribute("summary", new AdminSummary(
                 activeWaitingRows.size(),
                 countByStatus(activeWaitingRows, WaitingStatus.WAITING.name()),
                 countByStatus(activeWaitingRows, WaitingStatus.CALLED.name()),
+                countByStatus(activeWaitingRows, WaitingStatus.ARRIVED.name()),
                 pageView.totalPages()
         ));
         model.addAttribute("waitings", pageView.items());
+        model.addAttribute("sectionHeadings", sectionHeadings(pageView.items()));
         model.addAttribute("page", pageView);
         model.addAttribute("enteredCount", waitingService.enteredWaitings().size());
+        model.addAttribute("boothQueueCapacity", waitingService.boothQueueCapacity());
+        model.addAttribute("boothQueueCount", waitingService.boothQueueCount(activeWaitings));
+        model.addAttribute("callShortageCount", waitingService.callShortageCount(activeWaitings));
         return "admin/waitings";
     }
 
@@ -110,9 +121,51 @@ public class WaitingPageController {
         return "redirect:/admin/waitings";
     }
 
+    @PostMapping("/admin/waitings/{id}/arrive")
+    public String arrive(@PathVariable Long id) {
+        waitingService.arriveWaiting(id);
+        return "redirect:/admin/waitings";
+    }
+
+    @PostMapping("/admin/waitings/{id}/cancel")
+    public String adminCancel(@PathVariable Long id) {
+        waitingService.adminCancelWaiting(id);
+        return "redirect:/admin/waitings";
+    }
+
     @PostMapping("/admin/waitings/{id}/no-show")
     public String noShow(@PathVariable Long id) {
         waitingService.noShowWaiting(id);
+        return "redirect:/admin/waitings";
+    }
+
+    @PostMapping("/admin/waitings/notify-shortage")
+    public String notifyShortage(RedirectAttributes redirectAttributes) {
+        try {
+            int sentCount = waitingService.notifyShortageWaitings();
+            redirectAttributes.addFlashAttribute(
+                    sentCount > 0 ? "successMessage" : "errorMessage",
+                    sentCount > 0
+                            ? sentCount + "명에게 카카오 알림톡을 발송했습니다."
+                            : "호출할 부족 인원이 없거나 호출 가능한 웨이팅이 없습니다."
+            );
+        } catch (WaitingNotificationFailedException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", "카카오 알림톡 발송에 실패했습니다. 로그를 확인해 주세요.");
+        }
+        return "redirect:/admin/waitings";
+    }
+
+    @PostMapping("/admin/waitings/{id}/notify")
+    public String notify(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            boolean sent = waitingService.notifyWaiting(id);
+            redirectAttributes.addFlashAttribute(
+                    sent ? "successMessage" : "errorMessage",
+                    sent ? "카카오 알림톡을 발송했습니다." : "이미 호출되었거나 발송할 수 없는 웨이팅입니다."
+            );
+        } catch (WaitingNotificationFailedException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", "카카오 알림톡 발송에 실패했습니다. 로그를 확인해 주세요.");
+        }
         return "redirect:/admin/waitings";
     }
 
@@ -131,25 +184,75 @@ public class WaitingPageController {
                 waiting.createdAt(),
                 notice(waiting.status(), remainingCount),
                 title(waiting.status(), remainingCount),
-                waiting.status().active()
+                waiting.status().cancellable()
         );
     }
 
     private List<AdminWaitingRow> activeWaitingRows(List<WaitingEntry> activeWaitings) {
-        return IntStream.range(0, activeWaitings.size())
-                .mapToObj(index -> {
-                    WaitingEntry waiting = activeWaitings.get(index);
-                    return new AdminWaitingRow(
-                            waiting.id(),
-                            maskPhoneNumber(waiting.phoneNumber()),
-                            waiting.status().name(),
-                            waiting.status().label(),
-                            index,
-                            waiting.createdAt(),
-                            waiting.status().active()
-                    );
-                })
+        List<AdminWaitingRow> rows = new ArrayList<>();
+
+        for (int index = 0; index < activeWaitings.size(); index++) {
+            WaitingEntry waiting = activeWaitings.get(index);
+
+            rows.add(new AdminWaitingRow(
+                    waiting.id(),
+                    maskPhoneNumber(waiting.phoneNumber()),
+                    waiting.status().name(),
+                    waiting.status().label(),
+                    index,
+                    waiting.createdAt(),
+                    waiting.notifiedAt(),
+                    waitingService.callElapsedLabel(waiting),
+                    waitingService.callOverdue(waiting),
+                    waiting.status() == WaitingStatus.WAITING && waiting.notifiedAt() == null,
+                    waiting.status() == WaitingStatus.CALLED,
+                    waiting.status() == WaitingStatus.ARRIVED,
+                    waiting.status() == WaitingStatus.CALLED,
+                    waiting.status() == WaitingStatus.WAITING,
+                    waiting.status().active()
+            ));
+        }
+
+        return rows;
+    }
+
+    private List<AdminWaitingRow> groupedActiveWaitingRows(List<WaitingEntry> activeWaitings) {
+        return activeWaitingRows(activeWaitings).stream()
+                .sorted(Comparator.comparingInt(this::statusGroupOrder)
+                        .thenComparing(AdminWaitingRow::remainingCount))
                 .toList();
+    }
+
+    private Map<Long, String> sectionHeadings(List<AdminWaitingRow> waitings) {
+        Map<Long, String> headings = new LinkedHashMap<>();
+        String previousStatus = null;
+        for (AdminWaitingRow waiting : waitings) {
+            if (!waiting.status().equals(previousStatus)) {
+                headings.put(waiting.id(), sectionLabel(waiting.status()));
+                previousStatus = waiting.status();
+            }
+        }
+        return headings;
+    }
+
+    private int statusGroupOrder(AdminWaitingRow waiting) {
+        return switch (WaitingStatus.valueOf(waiting.status())) {
+            case WAITING -> 0;
+            case CALLED -> 1;
+            case ARRIVED -> 2;
+            case ENTERED, NO_SHOWED, CANCELED -> 3;
+        };
+    }
+
+    private String sectionLabel(String status) {
+        return switch (WaitingStatus.valueOf(status)) {
+            case WAITING -> "WAITING 고객";
+            case CALLED -> "CALLED 고객";
+            case ARRIVED -> "ARRIVED 고객";
+            case ENTERED -> "ENTERED 고객";
+            case NO_SHOWED -> "NO_SHOW 고객";
+            case CANCELED -> "CANCELED 고객";
+        };
     }
 
     private List<AdminEnteredRow> enteredWaitingRows() {
@@ -168,9 +271,10 @@ public class WaitingPageController {
     private String title(WaitingStatus status, Integer remainingCount) {
         return switch (status) {
             case WAITING -> remainingCount == 0 ? "곧 입장 차례입니다" : remainingCount + "팀 앞에서 대기 중입니다";
-            case CALLED -> "입장 준비가 완료되었습니다";
+            case CALLED -> "부스로 이동해 주세요";
+            case ARRIVED -> "현장 도착이 확인되었습니다";
             case ENTERED -> "입장 완료되었습니다";
-            case NO_SHOW -> "노쇼 처리되었습니다";
+            case NO_SHOWED -> "노쇼 처리되었습니다";
             case CANCELED -> "웨이팅이 취소되었습니다";
         };
     }
@@ -179,10 +283,11 @@ public class WaitingPageController {
         return switch (status) {
             case WAITING -> remainingCount == 0
                     ? "현장 직원 안내에 따라 입장을 준비해 주세요."
-                    : "앞 순서가 가까워지면 SMS로 알려드립니다.";
-            case CALLED -> "호출 SMS를 발송했습니다. 현장 직원 안내에 따라 입장해 주세요.";
+                    : "앞 순서가 가까워지면 카카오 알림톡으로 알려드립니다.";
+            case CALLED -> "호출 카카오 알림톡을 발송했습니다. 부스 대기줄에 도착하면 현장 직원에게 확인해 주세요.";
+            case ARRIVED -> "현장 직원이 도착을 확인했습니다. 체험 시작 전까지 대기해 주세요.";
             case ENTERED -> "입장 처리가 완료되었습니다.";
-            case NO_SHOW -> "현장 관리자에 의해 노쇼 처리되었습니다.";
+            case NO_SHOWED -> "호출 후 10분 동안 현장 도착이 확인되지 않아 노쇼 처리되었습니다.";
             case CANCELED -> "웨이팅 취소가 완료되었습니다.";
         };
     }

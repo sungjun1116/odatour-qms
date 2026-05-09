@@ -34,8 +34,12 @@
             <strong th:text="${summary.waiting}">9</strong>
         </article>
         <article class="summary-card">
-            <span>호출 완료</span>
+            <span>호출됨</span>
             <strong th:text="${summary.called}">4</strong>
+        </article>
+        <article class="summary-card">
+            <span>현장도착</span>
+            <strong th:text="${summary.arrived}">1</strong>
         </article>
         <article class="summary-card">
             <span>페이지</span>
@@ -43,9 +47,31 @@
         </article>
     </section>
 
+    <section class="operation-panel" aria-label="호출 운영">
+        <div>
+            <span>현장 관리 인원</span>
+            <strong>
+                <span th:text="${boothQueueCount}">3</span>/<span th:text="${boothQueueCapacity}">5</span>
+            </strong>
+            <small>부족 인원 <b th:text="${callShortageCount}">2</b>명</small>
+        </div>
+        <form th:action="@{/admin/waitings/notify-shortage}" method="post">
+            <button class="small-button" type="submit" th:disabled="${callShortageCount == 0}"
+                    onclick="return confirm('부족 인원을 호출 처리할까요?');">
+                부족 인원 호출
+            </button>
+        </form>
+    </section>
+
     <section class="admin-list" aria-label="웨이팅 목록">
+        <p class="form-alert success" th:if="${successMessage != null}" th:text="${successMessage}">카카오 알림톡을 발송했습니다.</p>
+        <p class="form-alert" th:if="${errorMessage != null}" th:text="${errorMessage}">카카오 알림톡 발송에 실패했습니다.</p>
         <p class="empty-message" th:if="${#lists.isEmpty(waitings)}">현재 처리할 웨이팅이 없습니다.</p>
-        <article class="waiting-card" th:each="waiting : ${waitings}">
+        <th:block th:each="waiting : ${waitings}">
+        <h2 class="list-section-title" th:if="${sectionHeadings[waiting.id] != null}"
+            th:text="${sectionHeadings[waiting.id]}">WAITING 고객</h2>
+        <article class="waiting-card"
+                 th:attr="data-called-at=${waiting.status == 'CALLED' && waiting.notifiedAt != null ? waiting.notifiedAt : null},data-call-overdue=${waiting.callOverdue}">
             <div class="waiting-main">
                 <div>
                     <span class="queue-number" th:text="|#${waiting.id}|">#1</span>
@@ -54,6 +80,8 @@
                 <span class="status-badge" th:classappend="| status-${waiting.status.toLowerCase()}|"
                       th:text="${waiting.statusLabel}">대기 중</span>
             </div>
+            <span class="overdue-label" data-overdue-label th:if="${waiting.status == 'CALLED'}"
+                  th:classappend="${waiting.callOverdue} ? '' : ' hidden'">호출 후 10분 경과</span>
 
             <div class="waiting-meta">
                 <span>
@@ -62,19 +90,42 @@
                 </span>
                 <span>
                     등록
-                    <strong th:text="${#temporals.format(waiting.createdAt, 'HH:mm')}">13:42</strong>
+                    <strong th:text="${#temporals.format(waiting.createdAt, 'M/d HH:mm')}">5/9 13:42</strong>
+                </span>
+                <span th:if="${waiting.notifiedAt != null}">
+                    호출
+                    <strong th:text="${#temporals.format(waiting.notifiedAt, 'M/d HH:mm')}">5/9 13:45</strong>
+                </span>
+                <span th:if="${waiting.callElapsedLabel != null}">
+                    호출 후 경과
+                    <strong data-call-elapsed th:text="${waiting.callElapsedLabel}">7분 경과</strong>
                 </span>
             </div>
 
             <div class="admin-actions" th:if="${waiting.actionable}">
-                <form th:action="@{/admin/waitings/{id}/enter(id=${waiting.id})}" method="post">
-                    <button class="action-button enter" type="submit">입장 승인</button>
+                <form th:if="${waiting.notifiable}" th:action="@{/admin/waitings/{id}/notify(id=${waiting.id})}" method="post">
+                    <button class="action-button notify" type="submit"
+                            onclick="return confirm('이 고객을 호출 처리할까요?');">호출하기</button>
                 </form>
-                <form th:action="@{/admin/waitings/{id}/no-show(id=${waiting.id})}" method="post">
-                    <button class="action-button no-show" type="submit">노쇼</button>
+                <form th:if="${waiting.arrivable}" th:action="@{/admin/waitings/{id}/arrive(id=${waiting.id})}" method="post">
+                    <button class="action-button arrive" type="submit"
+                            onclick="return confirm('이 고객을 현장도착 처리할까요?');">현장도착 확인</button>
+                </form>
+                <form th:if="${waiting.enterable}" th:action="@{/admin/waitings/{id}/enter(id=${waiting.id})}" method="post">
+                    <button class="action-button enter" type="submit"
+                            onclick="return confirm('이 고객을 입장 완료 처리할까요?');">입장완료</button>
+                </form>
+                <form th:if="${waiting.noShowable}" th:action="@{/admin/waitings/{id}/no-show(id=${waiting.id})}" method="post">
+                    <button class="action-button no-show" type="submit"
+                            onclick="return confirm('이 고객을 노쇼 처리할까요?');">노쇼</button>
+                </form>
+                <form th:if="${waiting.cancelable}" th:action="@{/admin/waitings/{id}/cancel(id=${waiting.id})}" method="post">
+                    <button class="action-button cancel" type="submit"
+                            onclick="return confirm('정말로 취소하시겠습니까?');">취소처리</button>
                 </form>
             </div>
         </article>
+        </th:block>
     </section>
 
     <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="웨이팅 목록 페이지">
@@ -88,5 +139,6 @@
            th:href="@{/admin/waitings(page=${page.nextPage})}">다음</a>
     </nav>
 </main>
+<script th:src="@{/js/admin-waitings.js}" defer></script>
 </body>
 </html>

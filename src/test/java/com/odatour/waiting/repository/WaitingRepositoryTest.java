@@ -49,15 +49,16 @@ class WaitingRepositoryTest {
 
         WaitingEntry waiting = waitingRepository.save("01012345678", true, WaitingStatus.WAITING, second);
         WaitingEntry called = waitingRepository.save("01012345679", true, WaitingStatus.CALLED, first);
-        waitingRepository.save("01012345670", true, WaitingStatus.ENTERED, first.plusMinutes(2));
+        WaitingEntry arrived = waitingRepository.save("01012345670", true, WaitingStatus.ARRIVED, first.plusMinutes(2));
+        waitingRepository.save("01012345671", true, WaitingStatus.ENTERED, first.plusMinutes(3));
 
         List<WaitingEntry> activeWaitings = waitingRepository.findByStatuses(
-                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED)
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED, WaitingStatus.ARRIVED)
         );
 
         assertThat(activeWaitings)
                 .extracting(WaitingEntry::id)
-                .containsExactly(called.id(), waiting.id());
+                .containsExactly(called.id(), waiting.id(), arrived.id());
     }
 
     @Test
@@ -68,7 +69,7 @@ class WaitingRepositoryTest {
 
         assertThat(waitingRepository.findFirstByPhoneNumberAndStatuses(
                 "01012345678",
-                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED)
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED, WaitingStatus.ARRIVED)
         )).hasValueSatisfying(waiting -> assertThat(waiting.id()).isEqualTo(active.id()));
     }
 
@@ -81,15 +82,13 @@ class WaitingRepositoryTest {
 
         int updated = waitingRepository.updateStatus(
                 waiting.id(),
-                WaitingStatus.WAITING,
-                WaitingStatus.CALLED,
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED),
                 WaitingStatus.ENTERED,
                 enteredAt
         );
         int ignored = waitingRepository.updateStatus(
                 alreadyEntered.id(),
-                WaitingStatus.WAITING,
-                WaitingStatus.CALLED,
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED),
                 WaitingStatus.CANCELED,
                 enteredAt
         );
@@ -104,6 +103,27 @@ class WaitingRepositoryTest {
     }
 
     @Test
+    void updateStatusChangesArrivedTimestamp() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 5, 8, 10, 0);
+        LocalDateTime arrivedAt = createdAt.plusMinutes(5);
+        WaitingEntry called = waitingRepository.save("01012345678", true, WaitingStatus.CALLED, createdAt);
+
+        int updated = waitingRepository.updateStatus(
+                called.id(),
+                List.of(WaitingStatus.CALLED),
+                WaitingStatus.ARRIVED,
+                arrivedAt
+        );
+
+        assertThat(updated).isEqualTo(1);
+        assertThat(waitingRepository.findById(called.id()))
+                .hasValueSatisfying(updatedWaiting -> {
+                    assertThat(updatedWaiting.status()).isEqualTo(WaitingStatus.ARRIVED);
+                    assertThat(updatedWaiting.arrivedAt()).isEqualTo(arrivedAt);
+                });
+    }
+
+    @Test
     void findEnteredReturnsLatestEnteredFirst() {
         LocalDateTime base = LocalDateTime.of(2026, 5, 8, 10, 0);
         WaitingEntry firstEntered = waitingRepository.save("01012345678", true, WaitingStatus.WAITING, base);
@@ -112,15 +132,13 @@ class WaitingRepositoryTest {
 
         waitingRepository.updateStatus(
                 firstEntered.id(),
-                WaitingStatus.WAITING,
-                WaitingStatus.CALLED,
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED),
                 WaitingStatus.ENTERED,
                 base.plusMinutes(10)
         );
         waitingRepository.updateStatus(
                 secondEntered.id(),
-                WaitingStatus.WAITING,
-                WaitingStatus.CALLED,
+                List.of(WaitingStatus.WAITING, WaitingStatus.CALLED),
                 WaitingStatus.ENTERED,
                 base.plusMinutes(20)
         );

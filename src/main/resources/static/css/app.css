@@ -35,6 +35,10 @@ input {
     min-height: 100vh;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .mobile-shell {
     width: min(100%, 480px);
     margin: 0 auto;
@@ -126,6 +130,12 @@ h1 {
     font-weight: 800;
 }
 
+.form-alert.success {
+    border-color: rgba(22, 163, 74, 0.24);
+    background: #f0fdf4;
+    color: #166534;
+}
+
 .field {
     display: grid;
     gap: 8px;
@@ -211,6 +221,11 @@ h1 {
     background: var(--primary-strong);
 }
 
+.small-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
 .danger-button {
     width: 100%;
     margin-top: 10px;
@@ -293,12 +308,17 @@ h1 {
     color: var(--success);
 }
 
+.status-arrived {
+    background: #f0f9ff;
+    color: #0369a1;
+}
+
 .status-entered {
     background: #eff6ff;
     color: #1d4ed8;
 }
 
-.status-no_show {
+.status-no_showed {
     background: #fef2f2;
     color: var(--danger);
 }
@@ -407,7 +427,7 @@ h1 {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 18px;
 }
@@ -424,9 +444,55 @@ h1 {
     font-size: 28px;
 }
 
+.operation-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.operation-panel span,
+.operation-panel small {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.operation-panel strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--surface-strong);
+    font-size: 22px;
+}
+
+.operation-panel strong span {
+    color: inherit;
+    font-size: inherit;
+}
+
+.operation-panel small {
+    display: block;
+    margin-top: 4px;
+}
+
+.operation-panel form {
+    margin: 0;
+}
+
 .admin-list {
     display: grid;
     gap: 12px;
+}
+
+.list-section-title {
+    margin: 10px 0 0;
+    color: var(--surface-strong);
+    font-size: 15px;
+    font-weight: 800;
 }
 
 .empty-message {
@@ -461,6 +527,16 @@ h1 {
     font-size: 18px;
 }
 
+.overdue-label {
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #fef2f2;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .waiting-meta {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -482,7 +558,7 @@ h1 {
 
 .admin-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
 }
 
@@ -500,8 +576,20 @@ h1 {
     background: var(--primary);
 }
 
+.action-button.notify {
+    background: #0f766e;
+}
+
+.action-button.arrive {
+    background: #0369a1;
+}
+
 .action-button.no-show {
     background: var(--danger);
+}
+
+.action-button.cancel {
+    background: #475569;
 }
 
 .pagination {
@@ -553,6 +641,15 @@ h1 {
     .admin-header-actions {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .operation-panel {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .operation-panel .small-button {
+        width: 100%;
     }
 }
 
