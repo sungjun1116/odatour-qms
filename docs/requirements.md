@@ -80,7 +80,7 @@ Redis는 초기 버전에서는 사용하지 않는다. 로컬 개발은 Docker 
 ### 5.3 웨이팅 취소
 
 - 사용자는 본인의 대기 상태 화면에서 웨이팅을 취소할 수 있다.
-- 취소 가능 상태는 `WAITING`, `CALLED`다.
+- 취소 가능 상태는 `WAITING`이다.
 - 취소 시 상태를 `CANCELED`로 변경한다.
 - 취소된 사용자는 남은 순서 계산 대상에서 제외한다.
 - 취소된 사용자는 관리자 기본 웨이팅 목록에서 제외한다.
@@ -90,13 +90,13 @@ Redis는 초기 버전에서는 사용하지 않는다. 로컬 개발은 Docker 
 ### 5.4 관리자 취소 처리
 
 - 관리자는 고객 요청을 받아 대기자를 `CANCELED` 상태로 변경할 수 있다.
-- 관리자 취소 가능 상태는 `WAITING`, `CALLED`, `ARRIVED`다.
+- 관리자 취소 가능 상태는 `WAITING`이다.
 - 취소된 사용자는 남은 순서 계산 대상에서 제외한다.
 - 취소된 사용자는 관리자 기본 웨이팅 목록과 요약 지표에서 제외한다.
 
 ### 5.5 카카오 알림톡 발송
 
-- 카카오 알림톡은 관리자가 관리자 화면에서 호출 버튼을 눌렀을 때만 발송한다.
+- 카카오 알림톡은 관리자가 관리자 화면에서 개별 호출 버튼 또는 부족 인원 호출 버튼을 눌렀을 때만 발송한다.
 - 카카오 알림톡 발송에는 승인된 템플릿 ID를 사용한다.
 - 카카오 알림톡은 `WAITING` 상태이면서 `notified_at`이 없는 사용자에게만 발송한다.
 - 카카오 알림톡은 한 사용자에게 한 번만 발송한다.
@@ -119,8 +119,8 @@ Redis는 초기 버전에서는 사용하지 않는다. 로컬 개발은 Docker 
 
 ### 5.8 관리자 노쇼 처리
 
-- 관리자는 호출 후 10분 동안 현장 도착이 확인되지 않은 대기자를 `NO_SHOWED` 상태로 변경할 수 있다.
-- `NO_SHOWED`는 호출 후 고객이 현장에 오지 않아 운영자가 노쇼 처리한 상태다.
+- 관리자는 호출된 대기자 또는 현장도착 처리된 대기자를 `NO_SHOWED` 상태로 변경할 수 있다.
+- `NO_SHOWED`는 호출 후 고객이 현장에 오지 않았거나 운영 중 노쇼로 판단되어 운영자가 처리한 상태다.
 - 노쇼 처리된 사용자는 남은 순서 계산 대상에서 제외한다.
 
 ## 6. 상태 모델
@@ -129,7 +129,7 @@ Redis는 초기 버전에서는 사용하지 않는다. 로컬 개발은 Docker 
 WAITING -> CALLED -> ARRIVED -> ENTERED
 WAITING -> CANCELED
 CALLED  -> NO_SHOWED
-CALLED  -> CANCELED
+ARRIVED -> NO_SHOWED
 ```
 
 ### 상태 정의
@@ -140,8 +140,8 @@ CALLED  -> CANCELED
 | `CALLED` | 고객에게 부스로 오라고 알림을 보낸 상태 |
 | `ARRIVED` | 고객이 실제로 부스 대기줄에 도착했고 운영자가 확인한 상태 |
 | `ENTERED` | 고객이 실제로 VR 체험을 시작한 상태 |
-| `NO_SHOWED` | 호출 후 10분 동안 현장 도착이 확인되지 않아 운영자가 노쇼 처리한 상태 |
-| `CANCELED` | 고객이 직접 취소한 상태 |
+| `NO_SHOWED` | 호출 후 고객이 현장에 오지 않았거나 운영 중 노쇼로 판단되어 운영자가 처리한 상태 |
+| `CANCELED` | 호출 전 고객 또는 관리자가 취소한 상태 |
 
 ## 7. 데이터 모델 초안
 
@@ -195,7 +195,7 @@ CALLED  -> CANCELED
 - 현장도착 확인 버튼
 - 입장완료 버튼
 - 노쇼 버튼
-- 취소처리 버튼
+- 취소처리 버튼(`WAITING` 상태만)
 
 ## 9. API/Route 초안
 
@@ -214,6 +214,7 @@ Thymeleaf 기반 서버 렌더링을 기본으로 한다.
 | `POST` | `/admin/waitings/{id}/no-show` | 노쇼 처리 |
 | `POST` | `/admin/waitings/{id}/cancel` | 관리자 취소 처리 |
 | `POST` | `/admin/waitings/{id}/notify` | 카카오 알림톡 호출 |
+| `POST` | `/admin/waitings/notify-shortage` | 부족 인원 일괄 카카오 알림톡 호출 |
 
 ## 10. 실행 구성
 
@@ -227,12 +228,36 @@ Thymeleaf 기반 서버 렌더링을 기본으로 한다.
 
 ```yaml
 services:
+  app:
+    image: ${APP_IMAGE}
+    container_name: odatour-qms-app
+    ports:
+      - ${APP_PORT}:8080
+    environment:
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_H2_CONSOLE_ENABLED: "false"
+      SOLAPI_API_KEY: ${SOLAPI_API_KEY}
+      SOLAPI_API_SECRET_KEY: ${SOLAPI_API_SECRET_KEY}
+      SOLAPI_FROM: ${SOLAPI_FROM}
+      SOLAPI_KAKAO_PF_ID: ${SOLAPI_KAKAO_PF_ID}
+      SOLAPI_KAKAO_TEMPLATE_ID: ${SOLAPI_KAKAO_TEMPLATE_ID}
+      SOLAPI_KAKAO_DISABLE_SMS: ${SOLAPI_KAKAO_DISABLE_SMS:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   db:
     image: postgres:16
-    container_name: odatour-waiting-postgres
+    container_name: odatour-qms-db
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_BIND}:${POSTGRES_PORT}:5432"
     environment:
+      TZ: Asia/Seoul
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -243,6 +268,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres-data:
@@ -252,9 +278,13 @@ volumes:
 
 | 이름 | 설명 |
 | --- | --- |
+| `APP_PORT` | 운영 Docker Compose에서 Spring Boot 애플리케이션을 외부에 노출할 포트 |
+| `APP_IMAGE` | 운영 Docker Compose에서 실행할 애플리케이션 Docker 이미지 태그 |
 | `SPRING_DATASOURCE_URL` | 선택 값. 지정하지 않으면 로컬 H2를 사용하고, 운영 compose에서는 PostgreSQL JDBC URL로 주입된다 |
 | `SPRING_DATASOURCE_USERNAME` | 선택 값. 지정하지 않으면 로컬 H2 사용자 `sa`를 사용한다 |
 | `SPRING_DATASOURCE_PASSWORD` | 선택 값. 지정하지 않으면 빈 비밀번호를 사용한다 |
+| `SPRING_H2_CONSOLE_ENABLED` | H2 콘솔 사용 여부. 운영 compose에서는 `false`로 주입된다 |
+| `POSTGRES_BIND` | 운영 PostgreSQL 포트를 바인딩할 호스트 주소. 기본 예시는 `127.0.0.1` |
 | `POSTGRES_PORT` | 운영 PostgreSQL 공개 포트 |
 | `POSTGRES_DB` | 운영 Docker Compose PostgreSQL DB 이름 |
 | `POSTGRES_USER` | 운영 Docker Compose PostgreSQL 사용자 |

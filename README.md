@@ -42,7 +42,7 @@
 WAITING -> CALLED -> ARRIVED -> ENTERED
 WAITING -> CANCELED
 CALLED  -> NO_SHOWED
-CALLED  -> CANCELED
+ARRIVED -> NO_SHOWED
 ```
 
 | 상태 | 의미 |
@@ -51,8 +51,8 @@ CALLED  -> CANCELED
 | `CALLED` | 카카오 알림톡으로 호출된 상태 |
 | `ARRIVED` | 방문자가 부스 대기줄에 도착해 운영자가 확인한 상태 |
 | `ENTERED` | 방문자가 실제 체험을 시작한 상태 |
-| `NO_SHOWED` | 호출 후 현장 도착이 확인되지 않아 노쇼 처리된 상태 |
-| `CANCELED` | 방문자 또는 관리자가 취소 처리한 상태 |
+| `NO_SHOWED` | 호출 후 현장에 오지 않았거나 운영자가 노쇼 처리한 상태 |
+| `CANCELED` | 호출 전 방문자 또는 관리자가 취소 처리한 상태 |
 
 ## 화면 및 경로
 
@@ -141,4 +141,3 @@ docker compose up -d
 - [요구사항](docs/requirements.md)
 - [배포 설정](docs/deploy.md)
 - [개발 계획](docs/plan.md)
-
