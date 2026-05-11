@@ -20,6 +20,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
   db:
@@ -39,6 +44,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
 volumes:

@@ -15,6 +15,14 @@ spring:
     init:
       mode: always
 
+logging:
+  structured:
+    format:
+      console: logstash
+  level:
+    root: INFO
+    com.odatour.waiting: INFO
+
 solapi:
   api-key: ${SOLAPI_API_KEY:}
   api-secret-key: ${SOLAPI_API_SECRET_KEY:}
