@@ -196,7 +196,7 @@ public class WaitingPageController {
 
             rows.add(new AdminWaitingRow(
                     waiting.id(),
-                    maskPhoneNumber(waiting.phoneNumber()),
+                    formatPhoneNumber(waiting.phoneNumber()),
                     waiting.status().name(),
                     waiting.status().label(),
                     index,
@@ -259,7 +259,7 @@ public class WaitingPageController {
         return waitingService.enteredWaitings().stream()
                 .map(waiting -> new AdminEnteredRow(
                         waiting.id(),
-                        maskPhoneNumber(waiting.phoneNumber()),
+                        formatPhoneNumber(waiting.phoneNumber()),
                         waiting.status().name(),
                         waiting.status().label(),
                         waiting.createdAt(),
@@ -303,15 +303,6 @@ public class WaitingPageController {
         int estimatedWaitTeams = waitingService.activeWaitings().size();
         model.addAttribute("estimatedWaitTeams", estimatedWaitTeams);
         model.addAttribute("estimatedWaitMinutes", estimatedWaitMinutes(estimatedWaitTeams));
-    }
-
-    private String maskPhoneNumber(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.length() < 7) {
-            return "****";
-        }
-        String prefix = phoneNumber.substring(0, Math.min(3, phoneNumber.length()));
-        String suffix = phoneNumber.substring(phoneNumber.length() - 4);
-        return prefix + "-****-" + suffix;
     }
 
     private String formatPhoneNumber(String phoneNumber) {

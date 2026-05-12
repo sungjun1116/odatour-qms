@@ -76,7 +76,7 @@
             <div class="waiting-main">
                 <div>
                     <span class="queue-number" th:text="|#${waiting.id}|">#1</span>
-                    <strong th:text="${waiting.maskedPhoneNumber}">010-****-4412</strong>
+                    <strong th:text="${waiting.phoneNumber}">010-1234-4412</strong>
                 </div>
                 <span class="status-badge" th:classappend="| status-${waiting.status.toLowerCase()}|"
                       th:text="${waiting.statusLabel}">대기 중</span>

@@ -50,7 +50,7 @@
             <div class="waiting-main">
                 <div>
                     <span class="queue-number" th:text="|#${waiting.id}|">#101</span>
-                    <strong th:text="${waiting.maskedPhoneNumber}">010-****-2437</strong>
+                    <strong th:text="${waiting.phoneNumber}">010-1234-2437</strong>
                 </div>
                 <span class="status-badge status-entered" th:text="${waiting.statusLabel}">입장 완료</span>
             </div>
