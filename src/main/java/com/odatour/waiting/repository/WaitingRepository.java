@@ -112,6 +112,18 @@ public class WaitingRepository {
                 .list();
     }
 
+    public List<WaitingEntry> findCompleted() {
+        return jdbcClient.sql("""
+                        select *
+                        from waiting_entry
+                        where status in (:statuses)
+                        order by coalesce(entered_at, no_show_at, updated_at) desc, created_at desc, id desc
+                        """)
+                .param("statuses", List.of(WaitingStatus.ENTERED.name(), WaitingStatus.NO_SHOWED.name()))
+                .query(this::map)
+                .list();
+    }
+
     public int updateStatus(Long id, Collection<WaitingStatus> expectedStatuses, WaitingStatus nextStatus,
                             LocalDateTime now) {
         String timestampColumn = switch (nextStatus) {
@@ -153,6 +165,41 @@ public class WaitingRepository {
                 .param("updatedAt", now)
                 .param("id", id)
                 .param("expectedStatus", WaitingStatus.WAITING.name())
+                .update();
+    }
+
+    public int revertStatus(Long id, WaitingStatus expectedStatus, WaitingStatus previousStatus, LocalDateTime now) {
+        String clearedColumns = switch (previousStatus) {
+            case WAITING -> """
+                            notified_at = null,
+                            arrived_at = null,
+                            entered_at = null,
+                            no_show_at = null
+                    """;
+            case CALLED -> """
+                            arrived_at = null,
+                            entered_at = null,
+                            no_show_at = null
+                    """;
+            case ARRIVED -> """
+                            entered_at = null,
+                            no_show_at = null
+                    """;
+            default -> throw new IllegalArgumentException("Unsupported revert target status: " + previousStatus);
+        };
+
+        return jdbcClient.sql("""
+                        update waiting_entry
+                        set status = :previousStatus,
+                            updated_at = :updatedAt,
+                            %s
+                        where id = :id
+                          and status = :expectedStatus
+                        """.formatted(clearedColumns))
+                .param("previousStatus", previousStatus.name())
+                .param("updatedAt", now)
+                .param("id", id)
+                .param("expectedStatus", expectedStatus.name())
                 .update();
     }
 

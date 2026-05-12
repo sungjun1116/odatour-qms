@@ -15,14 +15,14 @@
             <h1>웨이팅 관리</h1>
         </div>
         <div class="admin-header-actions">
-            <a class="small-button secondary" th:href="@{/admin/waitings/entered}">입장 완료 <span th:text="${enteredCount}">12</span></a>
+            <a class="small-button secondary" th:href="@{/admin/waitings/entered}">처리 완료 <span th:text="${completedCount}">12</span></a>
             <a class="small-button" th:href="@{/admin/waitings}">새로고침</a>
         </div>
     </header>
 
     <nav class="admin-tabs" aria-label="관리자 목록">
         <a class="tab-link active" th:href="@{/admin/waitings}">처리 대기</a>
-        <a class="tab-link" th:href="@{/admin/waitings/entered}">입장 완료</a>
+        <a class="tab-link" th:href="@{/admin/waitings/entered}">처리 완료</a>
     </nav>
 
     <section class="summary-grid" aria-label="웨이팅 요약">
@@ -123,6 +123,10 @@
                 <form th:if="${waiting.cancelable}" th:action="@{/admin/waitings/{id}/cancel(id=${waiting.id})}" method="post">
                     <button class="action-button cancel" type="submit"
                             onclick="return confirm('정말로 취소하시겠습니까?');">취소처리</button>
+                </form>
+                <form th:if="${waiting.revertable}" th:action="@{/admin/waitings/{id}/revert(id=${waiting.id})}" method="post">
+                    <button class="action-button revert" type="submit"
+                            onclick="return confirm('이 고객의 처리를 되돌릴까요?');">되돌리기</button>
                 </form>
             </div>
         </article>

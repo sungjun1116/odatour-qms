@@ -123,6 +123,16 @@ Redis는 초기 버전에서는 사용하지 않는다. 로컬 개발은 Docker 
 - `NO_SHOWED`는 호출 후 고객이 현장에 오지 않았거나 운영 중 노쇼로 판단되어 운영자가 처리한 상태다.
 - 노쇼 처리된 사용자는 남은 순서 계산 대상에서 제외한다.
 
+### 5.9 관리자 처리 되돌리기
+
+- 관리자는 관리자 처리 이후 다음 상태를 이전 단계로 되돌릴 수 있다.
+- `CALLED`는 `WAITING`으로 되돌릴 수 있다.
+- `ARRIVED`는 `CALLED`로 되돌릴 수 있다.
+- `ENTERED`는 `ARRIVED`로 되돌릴 수 있다.
+- `NO_SHOWED`는 `CALLED`로 되돌릴 수 있다.
+- 고객이 직접 취소한 `CANCELED` 상태는 관리자가 되돌리지 않는다.
+- 되돌리기 시 되돌린 단계 이후의 처리 시각은 비운다.
+
 ## 6. 상태 모델
 
 ```text
@@ -130,6 +140,10 @@ WAITING -> CALLED -> ARRIVED -> ENTERED
 WAITING -> CANCELED
 CALLED  -> NO_SHOWED
 ARRIVED -> NO_SHOWED
+CALLED  -> WAITING   (관리자 되돌리기)
+ARRIVED -> CALLED    (관리자 되돌리기)
+ENTERED -> ARRIVED   (관리자 되돌리기)
+NO_SHOWED -> CALLED  (관리자 되돌리기)
 ```
 
 ### 상태 정의
@@ -184,9 +198,9 @@ ARRIVED -> NO_SHOWED
 - `CANCELED` 상태는 기본 화면의 요약과 상세 목록에서 제외
 - `ENTERED` 상태는 기본 화면의 요약과 상세 목록에서 제외
 - `NO_SHOWED` 상태는 기본 화면의 요약과 상세 목록에서 제외
-- 입장 완료된 사용자는 `/admin/waitings/entered` 화면에서 별도로 표시
+- 입장완료 또는 노쇼 처리된 사용자는 `/admin/waitings/entered` 처리 완료 화면에서 별도로 표시
 - 기본 웨이팅 목록은 10명 초과 시 페이징 처리
-- 입장 완료 목록은 10명 초과 시 페이징 처리
+- 처리 완료 목록은 10명 초과 시 페이징 처리
 - 휴대폰 번호 표시
 - 등록 시각
 - 현재 상태
@@ -196,6 +210,7 @@ ARRIVED -> NO_SHOWED
 - 입장완료 버튼
 - 노쇼 버튼
 - 취소처리 버튼(`WAITING` 상태만)
+- 되돌리기 버튼(`CALLED`, `ARRIVED`, `ENTERED`, `NO_SHOWED` 상태)
 
 ## 9. API/Route 초안
 
@@ -208,13 +223,14 @@ Thymeleaf 기반 서버 렌더링을 기본으로 한다.
 | `GET` | `/waitings/{id}` | 사용자 대기 상태 화면 |
 | `POST` | `/waitings/{id}/cancel` | 사용자 웨이팅 취소 |
 | `GET` | `/admin/waitings` | 관리자 웨이팅 목록 |
-| `GET` | `/admin/waitings/entered` | 입장 완료 목록 |
+| `GET` | `/admin/waitings/entered` | 처리 완료 목록 |
 | `POST` | `/admin/waitings/{id}/arrive` | 현장도착 확인 |
 | `POST` | `/admin/waitings/{id}/enter` | 입장완료 |
 | `POST` | `/admin/waitings/{id}/no-show` | 노쇼 처리 |
 | `POST` | `/admin/waitings/{id}/cancel` | 관리자 취소 처리 |
 | `POST` | `/admin/waitings/{id}/notify` | 카카오 알림톡 호출 |
 | `POST` | `/admin/waitings/notify-shortage` | 부족 인원 일괄 카카오 알림톡 호출 |
+| `POST` | `/admin/waitings/{id}/revert` | 관리자 처리 되돌리기 |
 
 ## 10. 실행 구성
 

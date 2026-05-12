@@ -624,6 +624,12 @@ h1 {
     background: #475569;
 }
 
+.action-button.revert {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--text);
+}
+
 .pagination {
     display: flex;
     align-items: center;

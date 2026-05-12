@@ -81,6 +81,11 @@ public class WaitingService {
         return waitingRepository.findEntered();
     }
 
+    @Transactional(readOnly = true)
+    public List<WaitingEntry> completedWaitings() {
+        return waitingRepository.findCompleted();
+    }
+
     @Transactional
     public void cancelWaiting(Long id) {
         waitingRepository.updateStatus(id, List.of(WaitingStatus.WAITING), WaitingStatus.CANCELED, now());
@@ -112,6 +117,24 @@ public class WaitingService {
                     WaitingStatus.NO_SHOWED,
                     now()
             );
+        }
+    }
+
+    @Transactional
+    public void revertAdminWaiting(Long id) {
+        WaitingEntry waiting = waitingRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new WaitingNotFoundException(id));
+
+        WaitingStatus previousStatus = switch (waiting.status()) {
+            case CALLED -> WaitingStatus.WAITING;
+            case ARRIVED -> WaitingStatus.CALLED;
+            case ENTERED -> WaitingStatus.ARRIVED;
+            case NO_SHOWED -> WaitingStatus.CALLED;
+            case WAITING, CANCELED -> null;
+        };
+
+        if (previousStatus != null) {
+            waitingRepository.revertStatus(id, waiting.status(), previousStatus, now());
         }
     }
 

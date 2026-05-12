@@ -146,15 +146,17 @@
    - 입장완료 버튼
    - 노쇼 버튼
    - 취소처리 버튼(`WAITING` 상태만)
+   - 되돌리기 버튼(`CALLED`, `ARRIVED`, `ENTERED`, `NO_SHOWED` 상태)
    - `GET /admin/waitings/entered`
-   - 입장 완료된 사용자는 별도 화면에 등록 순서 또는 입장완료 시각 순서로 표시
-   - 입장 완료 목록이 10명을 초과하면 페이징 처리
+   - 입장완료 또는 노쇼 처리된 사용자는 별도 처리 완료 화면에 처리 시각 순서로 표시
+   - 처리 완료 목록이 10명을 초과하면 페이징 처리
 
 6. 관리자 처리 구현
    - `POST /admin/waitings/{id}/arrive`
    - `POST /admin/waitings/{id}/enter`
    - `POST /admin/waitings/{id}/no-show`
    - `POST /admin/waitings/{id}/cancel`
+   - `POST /admin/waitings/{id}/revert`
    - 처리 후 관리자 목록으로 redirect
 
 7. SOLAPI 카카오 알림톡 연동

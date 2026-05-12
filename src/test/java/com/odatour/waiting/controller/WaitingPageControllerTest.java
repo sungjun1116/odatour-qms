@@ -141,7 +141,7 @@ class WaitingPageControllerTest {
                         "waitings",
                         "sectionHeadings",
                         "page",
-                        "enteredCount",
+                        "completedCount",
                         "boothQueueCapacity",
                         "boothQueueCount",
                         "callShortageCount"
@@ -166,21 +166,32 @@ class WaitingPageControllerTest {
     }
 
     @Test
-    void adminEnteredWaitingsShowsEnteredRows() throws Exception {
+    void adminEnteredWaitingsShowsCompletedRows() throws Exception {
         createWaiting("01012345678");
-        Long id = findIdByPhoneNumber("01012345678");
-        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+        createWaiting("01012345679");
+        Long enteredId = findIdByPhoneNumber("01012345678");
+        Long noShowId = findIdByPhoneNumber("01012345679");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", enteredId))
                 .andExpect(status().is3xxRedirection());
-        mockMvc.perform(post("/admin/waitings/{id}/arrive", id))
+        mockMvc.perform(post("/admin/waitings/{id}/arrive", enteredId))
                 .andExpect(status().is3xxRedirection());
-        mockMvc.perform(post("/admin/waitings/{id}/enter", id))
+        mockMvc.perform(post("/admin/waitings/{id}/enter", enteredId))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/waitings"));
+        mockMvc.perform(post("/admin/waitings/{id}/notify", noShowId))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/admin/waitings/{id}/no-show", noShowId))
+                .andExpect(status().is3xxRedirection());
 
         mockMvc.perform(get("/admin/waitings/entered"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/entered-waitings"))
-                .andExpect(model().attributeExists("enteredWaitings", "page", "activeCount"));
+                .andExpect(model().attributeExists("completedWaitings", "page", "activeCount", "enteredCount", "noShowedCount"))
+                .andExpect(content().string(containsString("처리 완료")))
+                .andExpect(content().string(containsString("입장완료")))
+                .andExpect(content().string(containsString("노쇼")))
+                .andExpect(content().string(containsString(">되돌리기</button>")))
+                .andExpect(content().string(containsString("이 고객의 처리를 되돌릴까요?")));
     }
 
     @Test
@@ -240,6 +251,8 @@ class WaitingPageControllerTest {
                 .andExpect(content().string(containsString(">현장도착 확인</button>")))
                 .andExpect(content().string(containsString("이 고객을 현장도착 처리할까요?")))
                 .andExpect(content().string(containsString(">노쇼</button>")))
+                .andExpect(content().string(containsString(">되돌리기</button>")))
+                .andExpect(content().string(containsString("이 고객의 처리를 되돌릴까요?")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">입장완료</button>"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">취소처리</button>"))))
                 .andExpect(content().string(containsString("overdue-label  hidden")));
@@ -273,8 +286,23 @@ class WaitingPageControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString("호출 후 10분 경과"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">현장도착 확인</button>"))))
                 .andExpect(content().string(containsString(">노쇼</button>")))
+                .andExpect(content().string(containsString(">되돌리기</button>")))
                 .andExpect(content().string(containsString("이 고객을 노쇼 처리할까요?")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(">취소처리</button>"))));
+    }
+
+    @Test
+    void revertWaitingRedirectsToAdminWaitingsAndRestoresPreviousStatus() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(post("/admin/waitings/{id}/revert", id))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"));
+
+        assertThat(findStatusById(id)).isEqualTo("WAITING");
     }
 
     @Test

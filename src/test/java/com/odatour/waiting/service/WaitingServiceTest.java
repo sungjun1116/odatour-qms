@@ -236,6 +236,60 @@ class WaitingServiceTest {
     }
 
     @Test
+    void revertAdminWaitingChangesCalledBackToWaitingAndAllowsCallingAgain() {
+        WaitingEntry waiting = waitingService.createWaiting("01012345678", true);
+        waitingService.notifyWaiting(waiting.id());
+
+        waitingService.revertAdminWaiting(waiting.id());
+
+        WaitingEntry reverted = waitingService.findWaiting(waiting.id());
+        assertThat(reverted.status()).isEqualTo(WaitingStatus.WAITING);
+        assertThat(reverted.notifiedAt()).isNull();
+
+        assertThat(waitingService.notifyWaiting(waiting.id())).isTrue();
+        assertThat(waitingNotificationSender.sentWaitingIds()).containsExactly(waiting.id(), waiting.id());
+    }
+
+    @Test
+    void revertAdminWaitingRestoresAdminProcessedStatusesAndSkipsCanceled() {
+        WaitingEntry arrived = waitingService.createWaiting("01012345678", true);
+        WaitingEntry entered = waitingService.createWaiting("01012345679", true);
+        WaitingEntry noShow = waitingService.createWaiting("01012345670", true);
+        WaitingEntry canceled = waitingService.createWaiting("01012345671", true);
+
+        waitingService.notifyWaiting(arrived.id());
+        waitingService.arriveWaiting(arrived.id());
+        waitingService.notifyWaiting(entered.id());
+        waitingService.arriveWaiting(entered.id());
+        waitingService.enterWaiting(entered.id());
+        waitingService.notifyWaiting(noShow.id());
+        waitingService.arriveWaiting(noShow.id());
+        waitingService.noShowWaiting(noShow.id());
+        waitingService.cancelWaiting(canceled.id());
+
+        waitingService.revertAdminWaiting(arrived.id());
+        waitingService.revertAdminWaiting(entered.id());
+        waitingService.revertAdminWaiting(noShow.id());
+        waitingService.revertAdminWaiting(canceled.id());
+
+        WaitingEntry revertedArrived = waitingService.findWaiting(arrived.id());
+        WaitingEntry revertedEntered = waitingService.findWaiting(entered.id());
+        WaitingEntry revertedNoShow = waitingService.findWaiting(noShow.id());
+        WaitingEntry unchangedCanceled = waitingService.findWaiting(canceled.id());
+
+        assertThat(revertedArrived.status()).isEqualTo(WaitingStatus.CALLED);
+        assertThat(revertedArrived.arrivedAt()).isNull();
+        assertThat(revertedArrived.notifiedAt()).isNotNull();
+        assertThat(revertedEntered.status()).isEqualTo(WaitingStatus.ARRIVED);
+        assertThat(revertedEntered.arrivedAt()).isNotNull();
+        assertThat(revertedEntered.enteredAt()).isNull();
+        assertThat(revertedNoShow.status()).isEqualTo(WaitingStatus.CALLED);
+        assertThat(revertedNoShow.arrivedAt()).isNull();
+        assertThat(revertedNoShow.noShowAt()).isNull();
+        assertThat(unchangedCanceled.status()).isEqualTo(WaitingStatus.CANCELED);
+    }
+
+    @Test
     void notifyShortageWaitingsCallsWaitingUpToCalledAndArrivedQueueShortage() {
         WaitingEntry first = waitingService.createWaiting("01012345678", true);
         WaitingEntry second = waitingService.createWaiting("01012345679", true);

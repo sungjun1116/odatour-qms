@@ -43,6 +43,10 @@ WAITING -> CALLED -> ARRIVED -> ENTERED
 WAITING -> CANCELED
 CALLED  -> NO_SHOWED
 ARRIVED -> NO_SHOWED
+CALLED  -> WAITING   (관리자 되돌리기)
+ARRIVED -> CALLED    (관리자 되돌리기)
+ENTERED -> ARRIVED   (관리자 되돌리기)
+NO_SHOWED -> CALLED  (관리자 되돌리기)
 ```
 
 | 상태 | 의미 |
@@ -63,13 +67,14 @@ ARRIVED -> NO_SHOWED
 | `GET` | `/waitings/{id}` | 방문자 대기 상태 화면 |
 | `POST` | `/waitings/{id}/cancel` | 방문자 웨이팅 취소 |
 | `GET` | `/admin/waitings` | 관리자 처리 대기 목록 |
-| `GET` | `/admin/waitings/entered` | 관리자 입장 완료 목록 |
+| `GET` | `/admin/waitings/entered` | 관리자 처리 완료 목록 |
 | `POST` | `/admin/waitings/{id}/notify` | 개별 카카오 알림톡 호출 |
 | `POST` | `/admin/waitings/notify-shortage` | 부족 인원 일괄 호출 |
 | `POST` | `/admin/waitings/{id}/arrive` | 현장도착 확인 |
 | `POST` | `/admin/waitings/{id}/enter` | 입장완료 처리 |
 | `POST` | `/admin/waitings/{id}/no-show` | 노쇼 처리 |
 | `POST` | `/admin/waitings/{id}/cancel` | 관리자 취소 처리 |
+| `POST` | `/admin/waitings/{id}/revert` | 관리자 처리 되돌리기 |
 
 ## 기술 스택
 

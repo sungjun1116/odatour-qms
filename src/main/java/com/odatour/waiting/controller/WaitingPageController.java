@@ -1,6 +1,6 @@
 package com.odatour.waiting.controller;
 
-import com.odatour.waiting.controller.view.AdminEnteredRow;
+import com.odatour.waiting.controller.view.AdminCompletedRow;
 import com.odatour.waiting.controller.view.AdminSummary;
 import com.odatour.waiting.controller.view.AdminWaitingRow;
 import com.odatour.waiting.controller.view.PageView;
@@ -10,6 +10,7 @@ import com.odatour.waiting.domain.WaitingStatus;
 import com.odatour.waiting.notification.WaitingNotificationFailedException;
 import com.odatour.waiting.service.DuplicateActiveWaitingException;
 import com.odatour.waiting.service.WaitingService;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -90,15 +91,15 @@ public class WaitingPageController {
 
         model.addAttribute("summary", new AdminSummary(
                 activeWaitingRows.size(),
-                countByStatus(activeWaitingRows, WaitingStatus.WAITING.name()),
-                countByStatus(activeWaitingRows, WaitingStatus.CALLED.name()),
-                countByStatus(activeWaitingRows, WaitingStatus.ARRIVED.name()),
+                countWaitingRowsByStatus(activeWaitingRows, WaitingStatus.WAITING.name()),
+                countWaitingRowsByStatus(activeWaitingRows, WaitingStatus.CALLED.name()),
+                countWaitingRowsByStatus(activeWaitingRows, WaitingStatus.ARRIVED.name()),
                 pageView.totalPages()
         ));
         model.addAttribute("waitings", pageView.items());
         model.addAttribute("sectionHeadings", sectionHeadings(pageView.items()));
         model.addAttribute("page", pageView);
-        model.addAttribute("enteredCount", waitingService.enteredWaitings().size());
+        model.addAttribute("completedCount", waitingService.completedWaitings().size());
         model.addAttribute("boothQueueCapacity", waitingService.boothQueueCapacity());
         model.addAttribute("boothQueueCount", waitingService.boothQueueCount(activeWaitings));
         model.addAttribute("callShortageCount", waitingService.callShortageCount(activeWaitings));
@@ -107,11 +108,14 @@ public class WaitingPageController {
 
     @GetMapping("/admin/waitings/entered")
     public String enteredWaitings(@RequestParam(defaultValue = "1") int page, Model model) {
-        PageView<AdminEnteredRow> pageView = paginate(enteredWaitingRows(), page);
+        List<AdminCompletedRow> completedWaitings = completedWaitingRows();
+        PageView<AdminCompletedRow> pageView = paginate(completedWaitings, page);
 
-        model.addAttribute("enteredWaitings", pageView.items());
+        model.addAttribute("completedWaitings", pageView.items());
         model.addAttribute("page", pageView);
         model.addAttribute("activeCount", waitingService.activeWaitings().size());
+        model.addAttribute("enteredCount", countCompletedRowsByStatus(completedWaitings, WaitingStatus.ENTERED.name()));
+        model.addAttribute("noShowedCount", countCompletedRowsByStatus(completedWaitings, WaitingStatus.NO_SHOWED.name()));
         return "admin/entered-waitings";
     }
 
@@ -136,6 +140,12 @@ public class WaitingPageController {
     @PostMapping("/admin/waitings/{id}/no-show")
     public String noShow(@PathVariable Long id) {
         waitingService.noShowWaiting(id);
+        return "redirect:/admin/waitings";
+    }
+
+    @PostMapping("/admin/waitings/{id}/revert")
+    public String revert(@PathVariable Long id) {
+        waitingService.revertAdminWaiting(id);
         return "redirect:/admin/waitings";
     }
 
@@ -209,6 +219,7 @@ public class WaitingPageController {
                     waiting.status() == WaitingStatus.ARRIVED,
                     waiting.status() == WaitingStatus.CALLED || waiting.status() == WaitingStatus.ARRIVED,
                     waiting.status() == WaitingStatus.WAITING,
+                    waiting.status() == WaitingStatus.CALLED || waiting.status() == WaitingStatus.ARRIVED,
                     waiting.status().active()
             ));
         }
@@ -255,17 +266,26 @@ public class WaitingPageController {
         };
     }
 
-    private List<AdminEnteredRow> enteredWaitingRows() {
-        return waitingService.enteredWaitings().stream()
-                .map(waiting -> new AdminEnteredRow(
+    private List<AdminCompletedRow> completedWaitingRows() {
+        return waitingService.completedWaitings().stream()
+                .map(waiting -> new AdminCompletedRow(
                         waiting.id(),
                         formatPhoneNumber(waiting.phoneNumber()),
                         waiting.status().name(),
                         waiting.status().label(),
                         waiting.createdAt(),
-                        waiting.enteredAt()
+                        processedAt(waiting),
+                        waiting.status() == WaitingStatus.ENTERED || waiting.status() == WaitingStatus.NO_SHOWED
                 ))
                 .toList();
+    }
+
+    private LocalDateTime processedAt(WaitingEntry waiting) {
+        return switch (waiting.status()) {
+            case ENTERED -> waiting.enteredAt() == null ? waiting.updatedAt() : waiting.enteredAt();
+            case NO_SHOWED -> waiting.noShowAt() == null ? waiting.updatedAt() : waiting.noShowAt();
+            case WAITING, CALLED, ARRIVED, CANCELED -> waiting.updatedAt();
+        };
     }
 
     private String title(WaitingStatus status, Integer remainingCount) {
@@ -316,7 +336,13 @@ public class WaitingPageController {
                 + phoneNumber.substring(7);
     }
 
-    private long countByStatus(List<AdminWaitingRow> waitings, String status) {
+    private long countWaitingRowsByStatus(List<AdminWaitingRow> waitings, String status) {
+        return waitings.stream()
+                .filter(waiting -> waiting.status().equals(status))
+                .count();
+    }
+
+    private long countCompletedRowsByStatus(List<AdminCompletedRow> waitings, String status) {
         return waitings.stream()
                 .filter(waiting -> waiting.status().equals(status))
                 .count();

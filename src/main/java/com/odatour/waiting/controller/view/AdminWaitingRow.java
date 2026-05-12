@@ -17,6 +17,7 @@ public record AdminWaitingRow(
         boolean enterable,
         boolean noShowable,
         boolean cancelable,
+        boolean revertable,
         boolean actionable
 ) {
 }

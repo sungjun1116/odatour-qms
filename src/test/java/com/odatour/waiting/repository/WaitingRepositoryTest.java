@@ -147,4 +147,66 @@ class WaitingRepositoryTest {
                 .extracting(WaitingEntry::id)
                 .containsExactly(secondEntered.id(), firstEntered.id());
     }
+
+    @Test
+    void findCompletedReturnsEnteredAndNoShowedLatestProcessedFirst() {
+        LocalDateTime base = LocalDateTime.of(2026, 5, 8, 10, 0);
+        WaitingEntry entered = waitingRepository.save("01012345678", true, WaitingStatus.WAITING, base);
+        WaitingEntry noShowed = waitingRepository.save("01012345679", true, WaitingStatus.WAITING, base.plusMinutes(1));
+        waitingRepository.save("01012345670", true, WaitingStatus.CANCELED, base.plusMinutes(2));
+
+        waitingRepository.updateStatus(
+                entered.id(),
+                List.of(WaitingStatus.WAITING),
+                WaitingStatus.ENTERED,
+                base.plusMinutes(10)
+        );
+        waitingRepository.updateStatus(
+                noShowed.id(),
+                List.of(WaitingStatus.WAITING),
+                WaitingStatus.NO_SHOWED,
+                base.plusMinutes(20)
+        );
+
+        assertThat(waitingRepository.findCompleted())
+                .extracting(WaitingEntry::id)
+                .containsExactly(noShowed.id(), entered.id());
+    }
+
+    @Test
+    void revertStatusChangesStatusAndClearsLaterTimestamps() {
+        LocalDateTime base = LocalDateTime.of(2026, 5, 8, 10, 0);
+        WaitingEntry waiting = waitingRepository.save("01012345678", true, WaitingStatus.WAITING, base);
+
+        waitingRepository.markNotified(waiting.id(), base.plusMinutes(1));
+        waitingRepository.updateStatus(
+                waiting.id(),
+                List.of(WaitingStatus.CALLED),
+                WaitingStatus.ARRIVED,
+                base.plusMinutes(2)
+        );
+        waitingRepository.updateStatus(
+                waiting.id(),
+                List.of(WaitingStatus.ARRIVED),
+                WaitingStatus.NO_SHOWED,
+                base.plusMinutes(3)
+        );
+
+        int updated = waitingRepository.revertStatus(
+                waiting.id(),
+                WaitingStatus.NO_SHOWED,
+                WaitingStatus.CALLED,
+                base.plusMinutes(4)
+        );
+
+        assertThat(updated).isEqualTo(1);
+        assertThat(waitingRepository.findById(waiting.id()))
+                .hasValueSatisfying(reverted -> {
+                    assertThat(reverted.status()).isEqualTo(WaitingStatus.CALLED);
+                    assertThat(reverted.notifiedAt()).isEqualTo(base.plusMinutes(1));
+                    assertThat(reverted.arrivedAt()).isNull();
+                    assertThat(reverted.noShowAt()).isNull();
+                    assertThat(reverted.updatedAt()).isEqualTo(base.plusMinutes(4));
+                });
+    }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>입장 완료 목록</title>
+    <title>처리 완료 목록</title>
     <link rel="icon" type="image/png" th:href="@{/images/icon.png}" href="/images/icon.png">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
@@ -12,7 +12,7 @@
     <header class="admin-header">
         <div>
             <p class="eyebrow">ODATOUR ADMIN</p>
-            <h1>입장 완료</h1>
+            <h1>처리 완료</h1>
         </div>
         <div class="admin-header-actions">
             <a class="small-button secondary" th:href="@{/admin/waitings}">처리 대기 <span th:text="${activeCount}">13</span></a>
@@ -22,21 +22,21 @@
 
     <nav class="admin-tabs" aria-label="관리자 목록">
         <a class="tab-link" th:href="@{/admin/waitings}">처리 대기</a>
-        <a class="tab-link active" th:href="@{/admin/waitings/entered}">입장 완료</a>
+        <a class="tab-link active" th:href="@{/admin/waitings/entered}">처리 완료</a>
     </nav>
 
-    <section class="summary-grid compact" aria-label="입장 완료 요약">
+    <section class="summary-grid compact" aria-label="처리 완료 요약">
         <article class="summary-card">
-            <span>입장 완료</span>
+            <span>처리 완료</span>
             <strong th:text="${page.totalItems}">12</strong>
         </article>
         <article class="summary-card">
-            <span>페이지당</span>
-            <strong th:text="${page.pageSize}">10</strong>
+            <span>입장 완료</span>
+            <strong th:text="${enteredCount}">8</strong>
         </article>
         <article class="summary-card">
-            <span>현재 페이지</span>
-            <strong th:text="${page.currentPage}">1</strong>
+            <span>노쇼</span>
+            <strong th:text="${noShowedCount}">4</strong>
         </article>
         <article class="summary-card">
             <span>전체 페이지</span>
@@ -44,15 +44,16 @@
         </article>
     </section>
 
-    <section class="admin-list" aria-label="입장 완료 목록">
-        <p class="empty-message" th:if="${#lists.isEmpty(enteredWaitings)}">입장 완료된 웨이팅이 없습니다.</p>
-        <article class="waiting-card" th:each="waiting : ${enteredWaitings}">
+    <section class="admin-list" aria-label="처리 완료 목록">
+        <p class="empty-message" th:if="${#lists.isEmpty(completedWaitings)}">처리 완료된 웨이팅이 없습니다.</p>
+        <article class="waiting-card" th:each="waiting : ${completedWaitings}">
             <div class="waiting-main">
                 <div>
                     <span class="queue-number" th:text="|#${waiting.id}|">#101</span>
                     <strong th:text="${waiting.phoneNumber}">010-1234-2437</strong>
                 </div>
-                <span class="status-badge status-entered" th:text="${waiting.statusLabel}">입장 완료</span>
+                <span class="status-badge" th:classappend="| status-${waiting.status.toLowerCase()}|"
+                      th:text="${waiting.statusLabel}">입장 완료</span>
             </div>
 
             <div class="waiting-meta">
@@ -61,14 +62,21 @@
                     <strong th:text="${#temporals.format(waiting.createdAt, 'M/d HH:mm')}">5/9 13:42</strong>
                 </span>
                 <span>
-                    입장
-                    <strong th:text="${#temporals.format(waiting.enteredAt, 'M/d HH:mm')}">5/9 14:02</strong>
+                    처리
+                    <strong th:text="${#temporals.format(waiting.processedAt, 'M/d HH:mm')}">5/9 14:02</strong>
                 </span>
+            </div>
+
+            <div class="admin-actions" th:if="${waiting.revertable}">
+                <form th:action="@{/admin/waitings/{id}/revert(id=${waiting.id})}" method="post">
+                    <button class="action-button revert" type="submit"
+                            onclick="return confirm('이 고객의 처리를 되돌릴까요?');">되돌리기</button>
+                </form>
             </div>
         </article>
     </section>
 
-    <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="입장 완료 목록 페이지">
+    <nav class="pagination" th:if="${page.totalPages > 1}" aria-label="처리 완료 목록 페이지">
         <a class="page-link" th:classappend="${!page.hasPrevious} ? ' disabled'"
            th:href="@{/admin/waitings/entered(page=${page.previousPage})}">이전</a>
         <a class="page-number" th:each="pageNumber : ${page.pageNumbers}"
