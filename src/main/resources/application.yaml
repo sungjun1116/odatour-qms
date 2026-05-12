@@ -1,6 +1,8 @@
 spring:
   config:
     import: optional:file:.env[.properties]
+  profiles:
+    default: local
   application:
     name: odatour-waiting-system
   datasource:
@@ -16,9 +18,6 @@ spring:
       mode: always
 
 logging:
-  structured:
-    format:
-      console: logstash
   level:
     root: INFO
     com.odatour.waiting: INFO
@@ -31,3 +30,14 @@ solapi:
     pf-id: ${SOLAPI_KAKAO_PF_ID:}
     template-id: ${SOLAPI_KAKAO_TEMPLATE_ID:}
     disable-sms: ${SOLAPI_KAKAO_DISABLE_SMS:true}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!local"
+
+logging:
+  structured:
+    format:
+      console: ${LOGGING_STRUCTURED_FORMAT_CONSOLE:logstash}

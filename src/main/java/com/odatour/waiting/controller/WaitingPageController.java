@@ -176,7 +176,7 @@ public class WaitingPageController {
 
         return new WaitingStatusView(
                 waiting.id(),
-                maskPhoneNumber(waiting.phoneNumber()),
+                formatPhoneNumber(waiting.phoneNumber()),
                 waiting.status().name(),
                 waiting.status().label(),
                 remainingCount,
@@ -312,6 +312,17 @@ public class WaitingPageController {
         String prefix = phoneNumber.substring(0, Math.min(3, phoneNumber.length()));
         String suffix = phoneNumber.substring(phoneNumber.length() - 4);
         return prefix + "-****-" + suffix;
+    }
+
+    private String formatPhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.length() != 11) {
+            return phoneNumber;
+        }
+        return phoneNumber.substring(0, 3)
+                + "-"
+                + phoneNumber.substring(3, 7)
+                + "-"
+                + phoneNumber.substring(7);
     }
 
     private long countByStatus(List<AdminWaitingRow> waitings, String status) {

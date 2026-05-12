@@ -114,7 +114,7 @@ class WaitingPageControllerTest {
                             .get("waiting");
                     assertThat(waiting.remainingCount()).isEqualTo(2);
                     assertThat(waiting.estimatedWaitMinutes()).isEqualTo(6);
-                    assertThat(waiting.maskedPhoneNumber()).isEqualTo("010-****-5693");
+                    assertThat(waiting.phoneNumber()).isEqualTo("010-1234-5693");
                 });
     }
 

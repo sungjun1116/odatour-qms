@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record WaitingStatusView(
         Long id,
-        String maskedPhoneNumber,
+        String phoneNumber,
         String status,
         String statusLabel,
         Integer remainingCount,
