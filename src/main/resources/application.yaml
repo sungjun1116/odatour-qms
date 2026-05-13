@@ -28,7 +28,8 @@ solapi:
   from: ${SOLAPI_FROM:}
   kakao:
     pf-id: ${SOLAPI_KAKAO_PF_ID:}
-    template-id: ${SOLAPI_KAKAO_TEMPLATE_ID:}
+    call-template-id: ${SOLAPI_KAKAO_CALL_TEMPLATE_ID:}
+    no-show-template-id: ${SOLAPI_KAKAO_NO_SHOW_TEMPLATE_ID:}
     disable-sms: ${SOLAPI_KAKAO_DISABLE_SMS:true}
 
 ---

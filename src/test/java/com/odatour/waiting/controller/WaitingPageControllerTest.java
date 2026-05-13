@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.odatour.waiting.controller.view.WaitingStatusView;
 import com.odatour.waiting.domain.WaitingEntry;
+import com.odatour.waiting.notification.WaitingNotificationFailedException;
 import com.odatour.waiting.notification.WaitingNotificationSender;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -221,6 +223,24 @@ class WaitingPageControllerTest {
                 .andExpect(redirectedUrl("/admin/waitings"));
 
         assertThat(findStatusById(id)).isEqualTo("NO_SHOWED");
+        assertThat(waitingNotificationSender.noShowNotificationWaitingIds()).containsExactly(id);
+    }
+
+    @Test
+    void noShowWaitingRedirectsWithErrorWhenNoShowAlimtalkFails() throws Exception {
+        createWaiting("01012345678");
+        Long id = findIdByPhoneNumber("01012345678");
+        mockMvc.perform(post("/admin/waitings/{id}/notify", id))
+                .andExpect(status().is3xxRedirection());
+        waitingNotificationSender.fail();
+
+        mockMvc.perform(post("/admin/waitings/{id}/no-show", id))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/waitings"))
+                .andExpect(flash().attribute("errorMessage", "노쇼 알림톡 발송에 실패했습니다. 로그를 확인해 주세요."));
+
+        assertThat(findStatusById(id)).isEqualTo("CALLED");
+        assertThat(waitingNotificationSender.noShowNotificationWaitingIds()).isEmpty();
     }
 
     @Test
@@ -373,18 +393,41 @@ class WaitingPageControllerTest {
     static class TestWaitingNotificationSender implements WaitingNotificationSender {
 
         private final List<Long> sentWaitingIds = new ArrayList<>();
+        private final List<Long> noShowNotificationWaitingIds = new ArrayList<>();
+        private boolean failing;
 
         @Override
         public void sendCall(WaitingEntry waiting) {
+            if (failing) {
+                throw new WaitingNotificationFailedException(waiting.id(), new RuntimeException("boom"));
+            }
             sentWaitingIds.add(waiting.id());
+        }
+
+        @Override
+        public void sendNoShow(WaitingEntry waiting) {
+            if (failing) {
+                throw new WaitingNotificationFailedException(waiting.id(), new RuntimeException("boom"));
+            }
+            noShowNotificationWaitingIds.add(waiting.id());
         }
 
         List<Long> sentWaitingIds() {
             return sentWaitingIds;
         }
 
+        List<Long> noShowNotificationWaitingIds() {
+            return noShowNotificationWaitingIds;
+        }
+
+        void fail() {
+            failing = true;
+        }
+
         void clear() {
             sentWaitingIds.clear();
+            noShowNotificationWaitingIds.clear();
+            failing = false;
         }
     }
 }

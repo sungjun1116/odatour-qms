@@ -138,8 +138,12 @@ public class WaitingPageController {
     }
 
     @PostMapping("/admin/waitings/{id}/no-show")
-    public String noShow(@PathVariable Long id) {
-        waitingService.noShowWaiting(id);
+    public String noShow(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            waitingService.noShowWaiting(id);
+        } catch (WaitingNotificationFailedException exception) {
+            redirectAttributes.addFlashAttribute("errorMessage", "노쇼 알림톡 발송에 실패했습니다. 로그를 확인해 주세요.");
+        }
         return "redirect:/admin/waitings";
     }
 

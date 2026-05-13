@@ -16,7 +16,8 @@ public class SolapiAlimtalkNotificationSender implements WaitingNotificationSend
     private final String apiSecretKey;
     private final String from;
     private final String pfId;
-    private final String templateId;
+    private final String callTemplateId;
+    private final String noShowTemplateId;
     private final boolean disableSms;
 
     public SolapiAlimtalkNotificationSender(
@@ -24,20 +25,31 @@ public class SolapiAlimtalkNotificationSender implements WaitingNotificationSend
             @Value("${solapi.api-secret-key:}") String apiSecretKey,
             @Value("${solapi.from:}") String from,
             @Value("${solapi.kakao.pf-id:}") String pfId,
-            @Value("${solapi.kakao.template-id:}") String templateId,
+            @Value("${solapi.kakao.call-template-id:}") String callTemplateId,
+            @Value("${solapi.kakao.no-show-template-id:}") String noShowTemplateId,
             @Value("${solapi.kakao.disable-sms:true}") boolean disableSms
     ) {
         this.apiKey = apiKey;
         this.apiSecretKey = apiSecretKey;
         this.from = from;
         this.pfId = pfId;
-        this.templateId = templateId;
+        this.callTemplateId = callTemplateId;
+        this.noShowTemplateId = noShowTemplateId;
         this.disableSms = disableSms;
     }
 
     @Override
     public void sendCall(WaitingEntry waiting) {
-        validateRequiredProperties();
+        send(waiting, callTemplateId);
+    }
+
+    @Override
+    public void sendNoShow(WaitingEntry waiting) {
+        send(waiting, noShowTemplateId);
+    }
+
+    private void send(WaitingEntry waiting, String templateId) {
+        validateRequiredProperties(templateId);
 
         KakaoOption kakaoOption = new KakaoOption();
         kakaoOption.setPfId(pfId);
@@ -62,7 +74,7 @@ public class SolapiAlimtalkNotificationSender implements WaitingNotificationSend
         return SolapiClient.INSTANCE.createInstance(apiKey, apiSecretKey);
     }
 
-    private void validateRequiredProperties() {
+    private void validateRequiredProperties(String templateId) {
         if (isBlank(apiKey) || isBlank(apiSecretKey) || isBlank(from) || isBlank(pfId) || isBlank(templateId)) {
             throw new IllegalStateException("SOLAPI 카카오 알림톡 설정이 누락되었습니다.");
         }

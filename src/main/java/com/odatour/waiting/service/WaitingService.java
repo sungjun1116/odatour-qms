@@ -111,12 +111,23 @@ public class WaitingService {
         WaitingEntry waiting = waitingRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new WaitingNotFoundException(id));
         if (waiting.status() == WaitingStatus.CALLED || waiting.status() == WaitingStatus.ARRIVED) {
-            waitingRepository.updateStatus(
+            int updatedCount = waitingRepository.updateStatus(
                     id,
                     List.of(WaitingStatus.CALLED, WaitingStatus.ARRIVED),
                     WaitingStatus.NO_SHOWED,
                     now()
             );
+            if (updatedCount == 1) {
+                try {
+                    waitingNotificationSender.sendNoShow(waiting);
+                } catch (RuntimeException exception) {
+                    log.error("카카오 노쇼 알림톡 발송 실패. waitingId={}, phoneNumber={}",
+                            waiting.id(), waiting.phoneNumber(), exception);
+                    throw exception instanceof WaitingNotificationFailedException
+                            ? exception
+                            : new WaitingNotificationFailedException(id, exception);
+                }
+            }
         }
     }
 

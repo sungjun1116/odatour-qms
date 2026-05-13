@@ -223,6 +223,7 @@ class WaitingServiceTest {
 
         waitingService.noShowWaiting(waiting.id());
         assertThat(waitingService.findWaiting(waiting.id()).status()).isEqualTo(WaitingStatus.NO_SHOWED);
+        assertThat(waitingNotificationSender.noShowNotificationWaitingIds()).containsExactly(waiting.id());
     }
 
     @Test
@@ -233,6 +234,20 @@ class WaitingServiceTest {
 
         waitingService.noShowWaiting(waiting.id());
         assertThat(waitingService.findWaiting(waiting.id()).status()).isEqualTo(WaitingStatus.NO_SHOWED);
+        assertThat(waitingNotificationSender.noShowNotificationWaitingIds()).containsExactly(waiting.id());
+    }
+
+    @Test
+    void noShowWaitingLeavesStatusWhenNoShowAlimtalkFails() {
+        WaitingEntry waiting = waitingService.createWaiting("01012345678", true);
+        waitingService.notifyWaiting(waiting.id());
+        waitingNotificationSender.fail();
+
+        assertThatThrownBy(() -> waitingService.noShowWaiting(waiting.id()))
+                .isInstanceOf(WaitingNotificationFailedException.class);
+
+        assertThat(waitingService.findWaiting(waiting.id()).status()).isEqualTo(WaitingStatus.CALLED);
+        assertThat(waitingNotificationSender.noShowNotificationWaitingIds()).isEmpty();
     }
 
     @Test
@@ -336,6 +351,7 @@ class WaitingServiceTest {
     static class TestWaitingNotificationSender implements WaitingNotificationSender {
 
         private final List<Long> sentWaitingIds = new ArrayList<>();
+        private final List<Long> noShowNotificationWaitingIds = new ArrayList<>();
         private boolean failing;
 
         @Override
@@ -346,8 +362,20 @@ class WaitingServiceTest {
             sentWaitingIds.add(waiting.id());
         }
 
+        @Override
+        public void sendNoShow(WaitingEntry waiting) {
+            if (failing) {
+                throw new WaitingNotificationFailedException(waiting.id(), new RuntimeException("boom"));
+            }
+            noShowNotificationWaitingIds.add(waiting.id());
+        }
+
         List<Long> sentWaitingIds() {
             return sentWaitingIds;
+        }
+
+        List<Long> noShowNotificationWaitingIds() {
+            return noShowNotificationWaitingIds;
         }
 
         void fail() {
@@ -356,6 +384,7 @@ class WaitingServiceTest {
 
         void clear() {
             sentWaitingIds.clear();
+            noShowNotificationWaitingIds.clear();
             failing = false;
         }
     }
