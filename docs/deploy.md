@@ -59,7 +59,8 @@ SOLAPI_API_KEY=change-me
 SOLAPI_API_SECRET_KEY=change-me
 SOLAPI_FROM=01012345678
 SOLAPI_KAKAO_PF_ID=change-me
-SOLAPI_KAKAO_TEMPLATE_ID=change-me
+SOLAPI_KAKAO_CALL_TEMPLATE_ID=change-me
+SOLAPI_KAKAO_NO_SHOW_TEMPLATE_ID=change-me
 SOLAPI_KAKAO_DISABLE_SMS=true
 
 POSTGRES_BIND=127.0.0.1
@@ -71,7 +72,7 @@ POSTGRES_PASSWORD=change-me
 
 `POSTGRES_BIND=127.0.0.1`이면 PostgreSQL 포트는 서버 내부에서만 열린다. 외부에서 DB에 직접 접속해야 하는 운영 요구가 없다면 이 값이 더 안전하다.
 
-카카오 알림톡 호출 기능을 운영에서 사용하려면 `SOLAPI_API_KEY`, `SOLAPI_API_SECRET_KEY`, `SOLAPI_FROM`, `SOLAPI_KAKAO_PF_ID`, `SOLAPI_KAKAO_TEMPLATE_ID` 값을 실제 승인된 값으로 설정해야 한다.
+카카오 알림톡 호출 및 노쇼 알림 기능을 운영에서 사용하려면 `SOLAPI_API_KEY`, `SOLAPI_API_SECRET_KEY`, `SOLAPI_FROM`, `SOLAPI_KAKAO_PF_ID`, `SOLAPI_KAKAO_CALL_TEMPLATE_ID`, `SOLAPI_KAKAO_NO_SHOW_TEMPLATE_ID` 값을 실제 승인된 값으로 설정해야 한다.
 
 `APP_IMAGE`는 GitHub Actions의 `APP_IMAGE` 값과 같아야 한다. 현재 workflow는 `odatour-qms:latest` 이미지를 빌드하고 서버에서 `docker load`한다. 서버 `.env`에 다른 태그가 들어 있으면 `docker compose up -d`가 로컬에 없는 이미지를 pull하려고 시도한다.
 

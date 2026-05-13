@@ -2,7 +2,7 @@
 
 오다투어 박람회 부스 방문자를 위한 웹 기반 웨이팅 관리 시스템입니다. 방문자는 QR 코드로 접속해 휴대폰 번호만 입력하면 웨이팅을 등록할 수 있고, 운영자는 관리자 화면에서 호출, 현장도착 확인, 입장완료, 노쇼, 취소 처리를 진행할 수 있습니다.
 
-별도 모바일 앱이나 실시간 대기열 인프라 없이 Spring Boot, Thymeleaf, JDBC 기반 서버 렌더링 웹 애플리케이션으로 동작합니다. 호출 알림은 SOLAPI 카카오 알림톡 연동을 통해 발송합니다.
+별도 모바일 앱이나 실시간 대기열 인프라 없이 Spring Boot, Thymeleaf, JDBC 기반 서버 렌더링 웹 애플리케이션으로 동작합니다. 호출/노쇼 알림은 SOLAPI 카카오 알림톡 연동을 통해 발송합니다.
 
 ## Screenshots
 
@@ -29,9 +29,9 @@
   - 현재 처리 대상 웨이팅 목록 확인
   - 상태별 요약 지표 확인
   - 부족 인원 일괄 호출
-  - 개별 카카오 알림톡 호출
+  - 개별 카카오 알림톡 호출 및 노쇼 알림 발송
   - 현장도착 확인, 입장완료, 노쇼, 취소 처리
-  - 입장 완료 목록 별도 확인
+  - 처리 완료 목록 별도 확인
 - 운영 데이터 저장
   - 로컬 개발: 파일 기반 H2
   - 운영 배포: PostgreSQL
@@ -120,10 +120,11 @@ http://localhost:8080/admin/waitings
 | `SOLAPI_API_SECRET_KEY` | SOLAPI API 시크릿 |
 | `SOLAPI_FROM` | 발신 번호 |
 | `SOLAPI_KAKAO_PF_ID` | 카카오 채널 PF ID |
-| `SOLAPI_KAKAO_TEMPLATE_ID` | 승인된 알림톡 템플릿 ID |
+| `SOLAPI_KAKAO_CALL_TEMPLATE_ID` | 승인된 호출 알림톡 템플릿 ID |
+| `SOLAPI_KAKAO_NO_SHOW_TEMPLATE_ID` | 승인된 노쇼 알림톡 템플릿 ID |
 | `SOLAPI_KAKAO_DISABLE_SMS` | 알림톡 실패 시 SMS 대체 발송 비활성화 여부 |
 
-카카오 알림톡 호출 기능을 실제로 사용하려면 SOLAPI 관련 값을 모두 설정해야 합니다.
+카카오 알림톡 호출 및 노쇼 알림 기능을 실제로 사용하려면 SOLAPI 관련 값을 모두 설정해야 합니다.
 
 ## 테스트
 
